@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # 配置国内 npm 镜像加速并安装依赖
-RUN npm config set registry https://registry.npmmirror.com && npm ci
+RUN npm config set registry https://registry.npmmirror.com && npm ci --legacy-peer-deps
 
 COPY . .
 # VITE_ 前缀变量需在构建期注入（通过 --build-arg 或 .env）
