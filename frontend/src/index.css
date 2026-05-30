@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 48 33% 97%; /* #FAF9F5 奶油纸白 */
+    --foreground: 160 15% 20%; /* #2B3A36 墨绿黑 */
+
+    --card: 45 25% 94%; /* #F5F3EB 侧边栏/卡片底色 */
+    --card-foreground: 160 15% 20%;
+    
+    --popover: 48 33% 97%;
+    --popover-foreground: 160 15% 20%;
+    
+    --primary: 160 20% 30%; /* 沉静墨绿 */
+    --primary-foreground: 48 33% 97%;
+    
+    --secondary: 40 15% 90%; /* 选中态/高亮底色 */
+    --secondary-foreground: 160 20% 30%;
+    
+    --muted: 40 10% 90%;
+    --muted-foreground: 160 10% 45%;
+    
+    --accent: 38 45% 57%; /* #C29F60 古典金 */
+    --accent-foreground: 48 33% 97%;
+    
+    --destructive: 347 77% 50%;
+    --destructive-foreground: 48 33% 97%;
+
+    --border: 40 15% 88%;
+    --input: 40 15% 88%;
+    --ring: 160 20% 30%;
+    
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, "Songti SC", "SimSun", serif;
+  }
+}
+
+@layer components {
+  /* 新的卡片阴影效果 */
+  .classic-card {
+    @apply bg-card rounded-2xl shadow-sm border border-border/50 hover:shadow-md transition-shadow duration-300;
+  }
+  
+  .sidebar-container {
+    @apply bg-background border-r border-border/80 shadow-[4px_0_24px_rgba(0,0,0,0.02)];
+  }
+}

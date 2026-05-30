@@ -1,0 +1,27 @@
+# Caddyfile — 前端静态托管 + /api 反代到 Go 后端（可选组件）
+# 仅当启用 compose 中 caddy 服务时使用。MVP 也可不用 Caddy，由 Go 直接 serve。
+:80 {
+    encode gzip
+
+    # API 反向代理到后端
+    handle /api/* {
+        reverse_proxy app:8080
+    }
+
+    # 上传与静态资源（与后端共享卷）
+    handle /uploads/* {
+        root * /srv
+        file_server
+    }
+    handle /static/* {
+        root * /srv
+        file_server
+    }
+
+    # 前端 SPA：其余路由回退到 index.html
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}

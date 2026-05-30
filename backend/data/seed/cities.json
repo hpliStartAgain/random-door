@@ -1,0 +1,52 @@
+[
+  {
+    "name": "北京", "province": "北京",
+    "lat": 39.9042, "lng": 116.4074,
+    "intro": "千年古都，明清两代皇城，京味文化与现代都市交融。",
+    "cover_image_url": "/static/landmarks/beijing_forbidden_city.jpg",
+    "dialect_sample": "您内位", "dialect_explanation": "北京话敬称，意为‘您这位’。",
+    "tags": ["ancient_capital", "north_china"],
+    "landmarks": [
+      { "name": "故宫", "image_url": "/static/landmarks/beijing_gugong.jpg", "description": "明清皇家宫殿，世界现存最大木结构宫殿群。" },
+      { "name": "长城（八达岭）", "image_url": "/static/landmarks/beijing_changcheng.jpg", "description": "雄踞燕山，万里长城代表段落。" }
+    ],
+    "foods": [
+      { "name": "北京烤鸭", "image_url": "/static/foods/beijing_kaoya.jpg", "description": "果木烤制，皮酥肉嫩，卷饼蘸酱。" },
+      { "name": "炸酱面", "image_url": "/static/foods/beijing_zhajiang.jpg", "description": "黄酱炒肉丁，配菜码，京味家常。" }
+    ],
+    "characters": [
+      {
+        "name": "老北京胡同向导", "character_type": "culture",
+        "avatar_url": "/static/characters/beijing_guide.jpg",
+        "persona": "一位在胡同里长大、爱聊京城掌故的老北京，热情、幽默、爱用京片子。",
+        "dialect_style": "北京话，儿化音多",
+        "prompt": "你是一位老北京胡同向导，用京味口吻介绍北京历史地标美食，方言需附普通话解释，不声称真实复活，回答150字内。"
+      }
+    ]
+  },
+  {
+    "name": "西安", "province": "陕西",
+    "lat": 34.3416, "lng": 108.9398,
+    "intro": "十三朝古都，盛唐气象，城墙巍峨，兵马俑震撼世界。",
+    "cover_image_url": "/static/landmarks/xian.jpg",
+    "dialect_sample": "嘹咋咧", "dialect_explanation": "关中方言，表示很好、很棒。",
+    "tags": ["ancient_capital", "northwest"],
+    "landmarks": [
+      { "name": "兵马俑", "image_url": "/static/landmarks/xian_bmy.jpg", "description": "秦始皇陵陪葬坑，世界第八大奇迹。" },
+      { "name": "西安城墙", "image_url": "/static/landmarks/xian_chengqiang.jpg", "description": "现存最完整的古城墙，可登城骑行。" }
+    ],
+    "foods": [
+      { "name": "肉夹馍", "image_url": "/static/foods/xian_rjm.jpg", "description": "腊汁肉夹白吉馍，关中名小吃。" },
+      { "name": "羊肉泡馍", "image_url": "/static/foods/xian_paomo.jpg", "description": "掰馍入汤，浓香醇厚。" }
+    ],
+    "characters": [
+      {
+        "name": "唐代长安书生", "character_type": "history",
+        "avatar_url": "/static/characters/xian_scholar.jpg",
+        "persona": "一位心怀盛唐、谈吐文雅的长安书生，喜引诗文，介绍古都风物。",
+        "dialect_style": "关中话",
+        "prompt": "你扮演盛唐长安书生，用文雅口吻介绍西安历史地标美食，可用少量关中话并解释，不编史、不声称真实复活，150字内。"
+      }
+    ]
+  }
+]

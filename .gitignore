@@ -1,0 +1,39 @@
+# .gitignore — 防止泄密与脏文件入库
+
+# ---------- 密钥与环境 ----------
+.env
+.env.local
+*.pem
+*.key
+
+# ---------- Go ----------
+/backend/server
+/backend/*.exe
+/backend/bin/
+*.test
+*.out
+
+# ---------- 前端 ----------
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+
+# ---------- 运行时产物（用户上传/生成图，不入库） ----------
+/uploads/
+!/uploads/.gitkeep
+/backend/uploads/
+
+# ---------- 日志 ----------
+*.log
+
+# ---------- IDE / 系统 ----------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---------- 保留项（显式不忽略） ----------
+!.env.example
+!backend/data/seed/*.json
