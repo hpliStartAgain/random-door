@@ -1,9 +1,12 @@
-# frontend/Dockerfile — 构建 React 产物（可选；MVP 也可本地 build 后交 Caddy）
+# frontend/Dockerfile — 构建 React 产物
 # ---------- 构建阶段 ----------
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+
+# 配置国内 npm 镜像加速并安装依赖
+RUN npm config set registry https://registry.npmmirror.com && npm ci
+
 COPY . .
 # VITE_ 前缀变量需在构建期注入（通过 --build-arg 或 .env）
 RUN npm run build
