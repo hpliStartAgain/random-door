@@ -75,7 +75,7 @@ backend/
 
 ### 3.2 visit_service.go
 - CreateAnonymousUser(anonymousID)：查/建 user。
-- CreateFreeVisit(userID, cityID, source)：写 city_visits(mode=free)。依赖 user_repo、visit_repo。
+- CreateFreeVisit(userID, cityID, source)：校验 user / city / source 后写 city_visits(mode=free)。依赖 user_repo、city_repo、visit_repo。
 
 ### 3.3 game_service.go（核心）
 - Init(userID, lat, lng)：用 geo.city_matcher 找最近城市作起点（lat/lng 缺省用默认北京）。

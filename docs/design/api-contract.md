@@ -62,6 +62,7 @@
 }
 ```
 **逻辑**：按 anonymous_id 查 users，存在则返回，不存在则创建。
+**错误**：anonymous_id 不是标准 UUID → 400 INVALID_PARAM。
 
 ---
 
@@ -118,6 +119,7 @@
 }
 ```
 **错误**：city 不存在 → 404 NOT_FOUND。
+**错误**：city_id 不是正整数 → 400 INVALID_PARAM。
 **注意**：响应中 characters 不返回 persona / prompt（敏感，仅后端组装 Prompt 用）。
 
 ---
@@ -139,6 +141,7 @@
 { "visit_id": 1001, "city_id": 3, "visit_mode": "free" }
 ```
 **逻辑**：写 city_visits，visit_mode=free，dice_roll_id=null。
+**错误**：user / city 不存在 → 404 NOT_FOUND；user_id / city_id 不是正整数或 source 不属于 map_click / search → 400 INVALID_PARAM。
 
 ---
 

@@ -85,7 +85,7 @@ func main() {
 	storage := upload.NewStorage(cfg.Server.UploadDir)
 
 	citySvc := service.NewCityService(cityRepo)
-	visitSvc := service.NewVisitService(userRepo, visitRepo)
+	visitSvc := service.NewVisitService(userRepo, cityRepo, visitRepo)
 	gameSvc := service.NewGameService(db, cityRepo, visitRepo, diceRepo)
 	chatSvc := service.NewChatService(cityRepo, chatRepo, llmClient)
 	achSvc := service.NewAchievementService(db, achRepo)

@@ -96,7 +96,7 @@
 
 - 本 task 代码与文档提交见本轮 git commit。
 
-### Task 3 [ ] 修缮后端匿名用户、城市与自由访问 API
+### Task 3 [x] 修缮后端匿名用户、城市与自由访问 API
 
 完成 `POST /api/users/anonymous`、`GET /api/cities`、`GET /api/cities/{city_id}`、`POST /api/visits/free` 的 repository/service/handler 分层和契约一致性。
 
@@ -104,13 +104,39 @@
 
 完成内容：
 
+- 先同步 `docs/design/api-contract.md`：明确匿名 ID 必须为标准 UUID，详情 ID 必须为正整数，自由访问需校验 user / city 存在性和 `map_click` / `search` 枚举。
+- 为 `UserRepo` 增加按 ID 查询；为城市及关联内容查询增加稳定的 `id ASC` 顺序。
+- 将 `CityService`、`VisitService` 的 repository 依赖收敛为小接口，保持 api → service → repository 单向分层，并允许离线 fake repository 测试。
+- 修复城市列表和详情吞掉 tags / landmarks / foods / characters 查询错误的问题；城市详情不再依赖字符串比较识别 404。
+- 匿名用户创建增加 UUID 校验与小写标准化，并在并发请求触发唯一键竞争时重新查询并恢复已有用户。
+- 自由访问增加正整数、source 枚举、用户存在性和城市存在性校验；成功记录保持 `visit_mode=free`、默认 `source=map_click`、`dice_roll_id=null`。
+- 新增 service 分类错误和 API 统一映射：本轮四条 API 稳定返回 400 `INVALID_PARAM`、404 `NOT_FOUND` 或脱敏后的 500 `INTERNAL_ERROR`。
+- 删除 `router.go` 未使用 import，更新 main 依赖注入，恢复全仓后端编译。
+- 新增 service 和 handler 自动测试，覆盖成功响应字段、敏感人物字段剔除、关联查询错误、UUID 边界、匿名并发恢复、缺失字段、非法 source、缺失用户、缺失城市和内部错误脱敏。
+
 验证结果：
+
+- `go test ./... -count=1`：通过，包含 model、seed、service、api 全仓后端测试。
+- `go vet ./...`：通过。
+- `go test ./internal/service ./internal/api -count=10`：通过，重复运行稳定。
+- 本轮修改 Go 文件执行 `gofmt -l`：无输出。
+- 全量 `gofmt -l cmd internal`：仅剩初始化前未触碰的 `internal/service/game_service.go`、`internal/upload/validator.go`，留到紧随其后的 Checkpoint A 统一修复。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+- `go test -race ./internal/service ./internal/api -count=1`：未运行成功；当前 Go 环境禁用 CGO，命令提示 `-race requires cgo`。
 
 剩余风险：
 
+- 当前机器没有 Docker，尚未以真实 MySQL 和 HTTP 进程执行四条 API；Compose 联调证据留到 Task 19/20。
+- 其他后端 handler 仍存在初始化前已有的 `err.Error()` 直接回传和错误分类不足；将在对应功能 task 及 Checkpoint A 中继续审计修复。
+- race 检查受本机 CGO 配置阻断；聚焦套件已连续执行 10 次，但最终具备 CGO 的环境仍应补跑 race。
+
 下一步：
 
+- 执行 Checkpoint A：完成 Task 1~3 后的首次全面检查-debug循环，修复发现的问题并复测。
+
 提交：
+
+- 本 task 代码与文档提交见本轮 git commit。
 
 ### Checkpoint A [ ] 完成 Task 1~3 后全面检查-debug循环
 
