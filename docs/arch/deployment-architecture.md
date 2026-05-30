@@ -56,7 +56,7 @@ performance_schema=OFF
 ```text
 1. cp .env.example .env 并填真实值
 2. docker compose up -d        # 起 mysql + app (+ caddy)
-3. app 启动时：连 mysql → 执行 migrations/schema.sql → 若表空导入 data/seed/*.json
+3. app 启动时：连 mysql → AutoMigrate → 校验并事务化 upsert `SEED_DIR` 下的 data/seed/*.json
 4. 访问：caddy 暴露端口(前端) / app:8080/api(后端)
 ```
 常用命令封装在 Makefile（up/down/build/migrate/seed/logs）。

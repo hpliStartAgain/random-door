@@ -55,7 +55,7 @@
 
 - 本 task 仅更新 goal 控制文件；提交见本轮 git commit。
 
-### Task 2 [ ] 修缮数据库 schema、model 与 12 城 seed
+### Task 2 [x] 修缮数据库 schema、model 与 12 城 seed
 
 对齐 12 张表、枚举、索引、GORM model、12 城精选内容和成就 seed；确保每城满足地标、美食、人物、方言要求，并保证初始化幂等。
 
@@ -63,13 +63,38 @@
 
 完成内容：
 
+- 为 schema 与 GORM model 补齐关联字段索引：用户当前城市、访问来源城市/骰子、骰子起终城市、打卡城市/地标/访问、成就关联、聊天城市/人物。
+- 为城市、标签、地标、美食、人物增加 seed 自然键唯一约束：`cities.name`、`city_tags(city_id, tag)`、`landmarks(city_id, name)`、`foods(city_id, name)`、`characters(city_id, name)`。
+- 新增 `backend/internal/seed`：启动前完整解析并校验 JSON；固定 12 城、每城 1~2 地标/1~2 美食/1 人物、方言字段、静态资源 URL、人物 Prompt 合规提醒、成就规则格式与 `tag_count` 可达性。
+- 将启动导入从“仅空表尽力插入，失败只 warn”改为读取 `SEED_DIR` 后在单一事务内幂等 upsert；任何失败整体回滚并阻止服务启动。
+- 调整城市内容标签：西安补 `spicy_food` 使“美食旅人”可达；大理改为 `southwest/bai_culture`；厦门改为 `coastal/minnan`；补齐北京人物 Prompt 的“不编史”提醒。
+- 同步 `.env.example`、数据库详设、后端文件职责、部署架构和目录结构。
+- 新增数据层自动测试：schema 12 表与索引、model table/tag 对齐、12 城内容、无效 seed 拒绝、成就可达性、GORM MySQL DryRun 全 catalog 冲突更新语句。
+
 验证结果：
+
+- `go test ./internal/model ./internal/seed ./internal/config -count=1`：通过。
+- `go vet ./internal/model ./internal/seed ./internal/config`：通过。
+- `gofmt -l cmd/server internal/config internal/model internal/seed`：无输出。
+- `TestUpsertCatalogGeneratesIdempotentStatements`：通过；整套 catalog 每条写入都生成 MySQL `ON DUPLICATE KEY UPDATE`。
+- PowerShell JSON/schema 断言：`CITY_COUNT=12`、`ACH_COUNT=11`、`TABLE_COUNT=12`、`SPICY_FOOD_CITIES=3`、`ANCIENT_CAPITAL_CITIES=3`、`JIANGNAN_CITIES=3`、`CONTENT_BOUNDS=True`。
+- `git diff --check`：通过。
+- `go test ./...` 与 `go vet ./...`：仍被初始化时已有的 `backend/internal/api/router.go` 未使用 `service` import 阻断；数据层聚焦测试均通过。
 
 剩余风险：
 
+- 当前机器没有 Docker，尚未在真实 MySQL 容器运行 AutoMigrate + 两次启动 upsert；运行态证明留到 Task 19/20。
+- seed URL 指向的静态图片文件尚未落盘，需在部署与静态资源任务中补齐。
+- 内容同步采用 upsert：可更新并补齐 JSON 中项目，不主动删除数据库里已存在但后来从 JSON 移除的旧项目。对全新部署与重复启动安全；如未来需要强一致清理，应设计显式维护命令。
+- 全仓后端编译仍有 API 层基线阻断，下一轮 Task 3 修缮时处理。
+
 下一步：
 
+- 执行 Task 3：修缮匿名用户、城市与自由访问 API，并恢复后端全仓编译。
+
 提交：
+
+- 本 task 代码与文档提交见本轮 git commit。
 
 ### Task 3 [ ] 修缮后端匿名用户、城市与自由访问 API
 

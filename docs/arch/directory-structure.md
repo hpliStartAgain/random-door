@@ -42,6 +42,7 @@ backend/
 │   ├── geo/                  # distance.go bearing.go target_point.go city_matcher.go
 │   ├── ai/                   # llm_client.go image_client.go prompt_builder.go
 │   ├── upload/               # validator.go storage.go
+│   ├── seed/                 # seed.go（校验 + 事务化幂等 upsert）
 │   ├── achievement/          # evaluator.go rules.go
 │   ├── middleware/           # cors.go logger.go recover.go rate_limit.go
 │   └── config/config.go

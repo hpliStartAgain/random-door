@@ -4,7 +4,7 @@
     "lat": 39.9042, "lng": 116.4074,
     "intro": "千年古都，明清两代皇城，京味文化与现代都市交融。",
     "cover_image_url": "/static/landmarks/beijing_forbidden_city.jpg",
-    "dialect_sample": "您内位", "dialect_explanation": "北京话敬称，意为‘您这位’。",
+    "dialect_sample": "您内位", "dialect_explanation": "北京话敬称，意为'您这位'。",
     "tags": ["ancient_capital", "north_china"],
     "landmarks": [
       { "name": "故宫", "image_url": "/static/landmarks/beijing_gugong.jpg", "description": "明清皇家宫殿，世界现存最大木结构宫殿群。" },
@@ -14,15 +14,13 @@
       { "name": "北京烤鸭", "image_url": "/static/foods/beijing_kaoya.jpg", "description": "果木烤制，皮酥肉嫩，卷饼蘸酱。" },
       { "name": "炸酱面", "image_url": "/static/foods/beijing_zhajiang.jpg", "description": "黄酱炒肉丁，配菜码，京味家常。" }
     ],
-    "characters": [
-      {
-        "name": "老北京胡同向导", "character_type": "culture",
-        "avatar_url": "/static/characters/beijing_guide.jpg",
-        "persona": "一位在胡同里长大、爱聊京城掌故的老北京，热情、幽默、爱用京片子。",
-        "dialect_style": "北京话，儿化音多",
-        "prompt": "你是一位老北京胡同向导，用京味口吻介绍北京历史地标美食，方言需附普通话解释，不声称真实复活，回答150字内。"
-      }
-    ]
+    "characters": [{
+      "name": "老北京胡同向导", "character_type": "culture",
+      "avatar_url": "/static/characters/beijing_guide.jpg",
+      "persona": "一位在胡同里长大、爱聊京城掌故的老北京，热情、幽默、爱用京片子。",
+      "dialect_style": "北京话，儿化音多",
+      "prompt": "你是一位老北京胡同向导，用京味口吻介绍北京历史地标美食，方言需附普通话解释，不编史、不声称真实复活，回答150字内。"
+    }]
   },
   {
     "name": "西安", "province": "陕西",
@@ -30,7 +28,7 @@
     "intro": "十三朝古都，盛唐气象，城墙巍峨，兵马俑震撼世界。",
     "cover_image_url": "/static/landmarks/xian.jpg",
     "dialect_sample": "嘹咋咧", "dialect_explanation": "关中方言，表示很好、很棒。",
-    "tags": ["ancient_capital", "northwest"],
+    "tags": ["ancient_capital", "northwest", "spicy_food"],
     "landmarks": [
       { "name": "兵马俑", "image_url": "/static/landmarks/xian_bmy.jpg", "description": "秦始皇陵陪葬坑，世界第八大奇迹。" },
       { "name": "西安城墙", "image_url": "/static/landmarks/xian_chengqiang.jpg", "description": "现存最完整的古城墙，可登城骑行。" }
@@ -39,14 +37,242 @@
       { "name": "肉夹馍", "image_url": "/static/foods/xian_rjm.jpg", "description": "腊汁肉夹白吉馍，关中名小吃。" },
       { "name": "羊肉泡馍", "image_url": "/static/foods/xian_paomo.jpg", "description": "掰馍入汤，浓香醇厚。" }
     ],
-    "characters": [
-      {
-        "name": "唐代长安书生", "character_type": "history",
-        "avatar_url": "/static/characters/xian_scholar.jpg",
-        "persona": "一位心怀盛唐、谈吐文雅的长安书生，喜引诗文，介绍古都风物。",
-        "dialect_style": "关中话",
-        "prompt": "你扮演盛唐长安书生，用文雅口吻介绍西安历史地标美食，可用少量关中话并解释，不编史、不声称真实复活，150字内。"
-      }
-    ]
+    "characters": [{
+      "name": "唐代长安书生", "character_type": "history",
+      "avatar_url": "/static/characters/xian_scholar.jpg",
+      "persona": "一位心怀盛唐、谈吐文雅的长安书生，喜引诗文，介绍古都风物。",
+      "dialect_style": "关中话",
+      "prompt": "你扮演盛唐长安书生，用文雅口吻介绍西安历史地标美食，可用少量关中话并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "南京", "province": "江苏",
+    "lat": 32.0603, "lng": 118.7969,
+    "intro": "六朝古都，十朝都会，秦淮河畔文脉绵延。",
+    "cover_image_url": "/static/landmarks/nanjing.jpg",
+    "dialect_sample": "多大事啊", "dialect_explanation": "南京话，表示'没什么大不了的'。",
+    "tags": ["ancient_capital", "jiangnan"],
+    "landmarks": [
+      { "name": "中山陵", "image_url": "/static/landmarks/nanjing_zhongshanling.jpg", "description": "孙中山先生陵墓，依紫金山而建。" },
+      { "name": "夫子庙", "image_url": "/static/landmarks/nanjing_fuzimiao.jpg", "description": "秦淮河畔文化地标，夜景璀璨。" }
+    ],
+    "foods": [
+      { "name": "鸭血粉丝汤", "image_url": "/static/foods/nanjing_yaxue.jpg", "description": "南京特色小吃，鲜美滑嫩。" },
+      { "name": "盐水鸭", "image_url": "/static/foods/nanjing_yanshuiya.jpg", "description": "金陵名菜，皮白肉嫩，清香不腻。" }
+    ],
+    "characters": [{
+      "name": "秦淮河畔说书人", "character_type": "culture",
+      "avatar_url": "/static/characters/nanjing_storyteller.jpg",
+      "persona": "一位秦淮河畔的老说书人，熟知六朝典故，说话温文尔雅。",
+      "dialect_style": "南京话",
+      "prompt": "你是秦淮河畔说书人，用温文尔雅的口吻讲南京历史地标美食，可用少量南京话并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "杭州", "province": "浙江",
+    "lat": 30.2741, "lng": 120.1551,
+    "intro": "人间天堂，西湖胜景，茶香飘溢的诗画江南。",
+    "cover_image_url": "/static/landmarks/hangzhou.jpg",
+    "dialect_sample": "来哇", "dialect_explanation": "杭州话，表示'来啊/来吧'。",
+    "tags": ["jiangnan", "wuyue"],
+    "landmarks": [
+      { "name": "西湖", "image_url": "/static/landmarks/hangzhou_xihu.jpg", "description": "世界文化遗产，三面环山一面城。" },
+      { "name": "灵隐寺", "image_url": "/static/landmarks/hangzhou_lingyin.jpg", "description": "江南名刹，飞来峰石刻精美。" }
+    ],
+    "foods": [
+      { "name": "西湖醋鱼", "image_url": "/static/foods/hangzhou_cuyu.jpg", "description": "杭帮菜代表，醋香鲜美。" },
+      { "name": "龙井虾仁", "image_url": "/static/foods/hangzhou_longjing.jpg", "description": "龙井茶配河虾，清雅鲜嫩。" }
+    ],
+    "characters": [{
+      "name": "西湖边茶馆老板", "character_type": "culture",
+      "avatar_url": "/static/characters/hangzhou_teahost.jpg",
+      "persona": "一位西湖边开茶馆的杭州人，爱聊茶道与西湖故事，温润细腻。",
+      "dialect_style": "杭州话",
+      "prompt": "你是西湖边茶馆老板，用温润口吻介绍杭州历史地标美食，可用少量杭州话并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "成都", "province": "四川",
+    "lat": 30.5728, "lng": 104.0668,
+    "intro": "天府之国，巴蜀文化中心，慢生活与美食之都。",
+    "cover_image_url": "/static/landmarks/chengdu.jpg",
+    "dialect_sample": "巴适得板", "dialect_explanation": "四川话，表示非常好、非常舒服。",
+    "tags": ["spicy_food", "modern_city"],
+    "landmarks": [
+      { "name": "武侯祠", "image_url": "/static/landmarks/chengdu_wuhouci.jpg", "description": "纪念诸葛亮的祠堂，三国文化圣地。" },
+      { "name": "宽窄巷子", "image_url": "/static/landmarks/chengdu_kuanzhai.jpg", "description": "清代老街，成都慢生活缩影。" }
+    ],
+    "foods": [
+      { "name": "火锅", "image_url": "/static/foods/chengdu_huoguo.jpg", "description": "麻辣鲜香，川味代表。" },
+      { "name": "担担面", "image_url": "/static/foods/chengdu_dandanmian.jpg", "description": "芝麻酱花生碎辣椒油，一碗入魂。" }
+    ],
+    "characters": [{
+      "name": "成都茶馆掌柜", "character_type": "culture",
+      "avatar_url": "/static/characters/chengdu_teamaster.jpg",
+      "persona": "一位成都老茶馆掌柜，爱摆龙门阵，说话慢悠悠充满生活智慧。",
+      "dialect_style": "四川话",
+      "prompt": "你是成都茶馆掌柜，用四川话口吻介绍成都历史地标美食，方言需附解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "广州", "province": "广东",
+    "lat": 23.1291, "lng": 113.2644,
+    "intro": "千年商都，岭南文化核心，早茶文化享誉天下。",
+    "cover_image_url": "/static/landmarks/guangzhou.jpg",
+    "dialect_sample": "饮咗茶未", "dialect_explanation": "粤语，意思是'喝过早茶了吗'。",
+    "tags": ["lingnan", "coastal", "modern_city"],
+    "landmarks": [
+      { "name": "广州塔", "image_url": "/static/landmarks/guangzhou_tower.jpg", "description": "小蛮腰，600米地标，珠江夜景尽收眼底。" },
+      { "name": "陈家祠", "image_url": "/static/landmarks/guangzhou_chenjiaci.jpg", "description": "岭南建筑艺术瑰宝，精美木雕砖雕。" }
+    ],
+    "foods": [
+      { "name": "早茶点心", "image_url": "/static/foods/guangzhou_dimsum.jpg", "description": "虾饺、烧卖、叉烧包，一盅两件。" },
+      { "name": "白切鸡", "image_url": "/static/foods/guangzhou_baiqieji.jpg", "description": "原汁原味，皮爽肉滑。" }
+    ],
+    "characters": [{
+      "name": "西关老街坊", "character_type": "culture",
+      "avatar_url": "/static/characters/guangzhou_neighbor.jpg",
+      "persona": "一位西关老街坊，热爱早茶文化，说话爽朗直接。",
+      "dialect_style": "粤语",
+      "prompt": "你是广州西关老街坊，用爽朗口吻介绍广州历史地标美食，可用少量粤语并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "哈尔滨", "province": "黑龙江",
+    "lat": 45.7567, "lng": 126.6528,
+    "intro": "冰城，东方小巴黎，冰雪文化与欧陆风情交融。",
+    "cover_image_url": "/static/landmarks/haerbin.jpg",
+    "dialect_sample": "嘎嘎好", "dialect_explanation": "东北话，表示'特别好'。",
+    "tags": ["dongbei", "north_china"],
+    "landmarks": [
+      { "name": "圣索菲亚教堂", "image_url": "/static/landmarks/haerbin_sophia.jpg", "description": "拜占庭式建筑，哈尔滨标志性地标。" },
+      { "name": "冰雪大世界", "image_url": "/static/landmarks/haerbin_icesnow.jpg", "description": "全球最大冰雪主题乐园。" }
+    ],
+    "foods": [
+      { "name": "锅包肉", "image_url": "/static/foods/haerbin_guobaorou.jpg", "description": "酸甜酥脆，东北硬菜。" },
+      { "name": "马迭尔冰棍", "image_url": "/static/foods/haerbin_madier.jpg", "description": "百年老字号，奶味浓郁。" }
+    ],
+    "characters": [{
+      "name": "冰城老铁", "character_type": "culture",
+      "avatar_url": "/static/characters/haerbin_laotie.jpg",
+      "persona": "一位豪爽热情的哈尔滨人，爱聊冰雪和东北文化。",
+      "dialect_style": "东北话",
+      "prompt": "你是哈尔滨老铁，用东北话口吻介绍哈尔滨历史地标美食，方言需附解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "苏州", "province": "江苏",
+    "lat": 31.2990, "lng": 120.5853,
+    "intro": "上有天堂下有苏杭，园林之城，吴侬软语。",
+    "cover_image_url": "/static/landmarks/suzhou.jpg",
+    "dialect_sample": "阿要辣油啊", "dialect_explanation": "苏州话，卖馄饨的吆喝'要不要加辣油啊'。",
+    "tags": ["jiangnan", "wuyue"],
+    "landmarks": [
+      { "name": "拙政园", "image_url": "/static/landmarks/suzhou_zhuozhengyuan.jpg", "description": "中国四大名园之一，典雅秀丽。" },
+      { "name": "虎丘", "image_url": "/static/landmarks/suzhou_huqiu.jpg", "description": "吴中第一名胜，云岩寺塔斜而不倒。" }
+    ],
+    "foods": [
+      { "name": "松鼠鳜鱼", "image_url": "/static/foods/suzhou_songshugui.jpg", "description": "苏帮菜代表，外酥里嫩酸甜可口。" },
+      { "name": "苏式汤面", "image_url": "/static/foods/suzhou_tangmian.jpg", "description": "红汤白汤，浇头丰富。" }
+    ],
+    "characters": [{
+      "name": "苏州园林讲解员", "character_type": "culture",
+      "avatar_url": "/static/characters/suzhou_guide.jpg",
+      "persona": "一位温婉的苏州园林讲解员，说话轻柔细腻，精通园林文化。",
+      "dialect_style": "苏州话（吴语）",
+      "prompt": "你是苏州园林讲解员，用温婉口吻介绍苏州历史地标美食，可用少量苏州话并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "大理", "province": "云南",
+    "lat": 25.6065, "lng": 100.2676,
+    "intro": "风花雪月，白族文化圣地，苍山洱海间的诗意栖居。",
+    "cover_image_url": "/static/landmarks/dali.jpg",
+    "dialect_sample": "板扎", "dialect_explanation": "云南话，表示'很好、很棒'。",
+    "tags": ["southwest", "bai_culture"],
+    "landmarks": [
+      { "name": "洱海", "image_url": "/static/landmarks/dali_erhai.jpg", "description": "高原明珠，苍山下碧波万顷。" },
+      { "name": "大理古城", "image_url": "/static/landmarks/dali_gucheng.jpg", "description": "白族建筑风情，五华楼巍峨。" }
+    ],
+    "foods": [
+      { "name": "饵丝", "image_url": "/static/foods/dali_ersi.jpg", "description": "大理特色米制品，鲜香爽滑。" },
+      { "name": "乳扇", "image_url": "/static/foods/dali_rushan.jpg", "description": "白族特色奶制品，烤炸皆宜。" }
+    ],
+    "characters": [{
+      "name": "白族阿鹏", "character_type": "culture",
+      "avatar_url": "/static/characters/dali_apeng.jpg",
+      "persona": "一位热情好客的白族青年，爱唱民歌，介绍风花雪月。",
+      "dialect_style": "云南话",
+      "prompt": "你是白族阿鹏，用热情口吻介绍大理历史地标美食，可用少量云南话并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "厦门", "province": "福建",
+    "lat": 24.4798, "lng": 118.0894,
+    "intro": "海上花园，鼓浪屿万国建筑，闽南风情浓郁。",
+    "cover_image_url": "/static/landmarks/xiamen.jpg",
+    "dialect_sample": "呷饱未", "dialect_explanation": "闽南语，意思是'吃饱了吗'。",
+    "tags": ["coastal", "minnan"],
+    "landmarks": [
+      { "name": "鼓浪屿", "image_url": "/static/landmarks/xiamen_gulangyu.jpg", "description": "世界文化遗产，钢琴之岛。" },
+      { "name": "南普陀寺", "image_url": "/static/landmarks/xiamen_nanputuo.jpg", "description": "千年古刹，闽南佛教圣地。" }
+    ],
+    "foods": [
+      { "name": "沙茶面", "image_url": "/static/foods/xiamen_shachamian.jpg", "description": "闽南特色面食，沙茶酱浓郁鲜美。" },
+      { "name": "海蛎煎", "image_url": "/static/foods/xiamen_haili.jpg", "description": "鲜嫩酥脆，闽南海鲜小吃。" }
+    ],
+    "characters": [{
+      "name": "鼓浪屿文艺青年", "character_type": "culture",
+      "avatar_url": "/static/characters/xiamen_artist.jpg",
+      "persona": "一位在鼓浪屿开咖啡馆的文艺青年，温暖治愈。",
+      "dialect_style": "闽南语",
+      "prompt": "你是鼓浪屿文艺青年，用温暖口吻介绍厦门历史地标美食，可用少量闽南语并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "长沙", "province": "湖南",
+    "lat": 28.2282, "lng": 112.9388,
+    "intro": "楚汉名城，娱乐之都，火辣湘菜与岳麓书院交相辉映。",
+    "cover_image_url": "/static/landmarks/changsha.jpg",
+    "dialect_sample": "恰饭克", "dialect_explanation": "长沙话，意思是'去吃饭'。",
+    "tags": ["spicy_food", "modern_city"],
+    "landmarks": [
+      { "name": "岳麓山", "image_url": "/static/landmarks/changsha_yuelu.jpg", "description": "千年学府岳麓书院所在，枫叶红遍。" },
+      { "name": "橘子洲", "image_url": "/static/landmarks/changsha_juzizhou.jpg", "description": "湘江中的绿洲，青年毛泽东雕塑矗立。" }
+    ],
+    "foods": [
+      { "name": "臭豆腐", "image_url": "/static/foods/changsha_choudoufu.jpg", "description": "闻着臭吃着香，长沙街头标配。" },
+      { "name": "小龙虾", "image_url": "/static/foods/changsha_xiaolongxia.jpg", "description": "口味虾，麻辣鲜香。" }
+    ],
+    "characters": [{
+      "name": "湘江畔老口子", "character_type": "culture",
+      "avatar_url": "/static/characters/changsha_laokouzi.jpg",
+      "persona": "一位长沙老口子，火辣直爽，爱聊吃喝玩乐。",
+      "dialect_style": "长沙话",
+      "prompt": "你是长沙老口子，用火辣直爽的口吻介绍长沙历史地标美食，可用少量长沙话并解释，不编史、不声称真实复活，150字内。"
+    }]
+  },
+  {
+    "name": "拉萨", "province": "西藏",
+    "lat": 29.6500, "lng": 91.1000,
+    "intro": "日光之城，藏传佛教圣地，世界屋脊上的心灵净土。",
+    "cover_image_url": "/static/landmarks/lasa.jpg",
+    "dialect_sample": "扎西德勒", "dialect_explanation": "藏语，表示'吉祥如意'。",
+    "tags": ["northwest"],
+    "landmarks": [
+      { "name": "布达拉宫", "image_url": "/static/landmarks/lasa_budala.jpg", "description": "世界文化遗产，藏传佛教圣殿。" },
+      { "name": "大昭寺", "image_url": "/static/landmarks/lasa_dazhao.jpg", "description": "藏传佛教信仰中心，八廓街环绕。" }
+    ],
+    "foods": [
+      { "name": "酥油茶", "image_url": "/static/foods/lasa_suyoucha.jpg", "description": "藏族日常饮品，咸香浓郁。" },
+      { "name": "糌粑", "image_url": "/static/foods/lasa_zanba.jpg", "description": "青稞炒面，藏族主食。" }
+    ],
+    "characters": [{
+      "name": "藏族导游扎西", "character_type": "culture",
+      "avatar_url": "/static/characters/lasa_zhaxi.jpg",
+      "persona": "一位虔诚善良的藏族导游，讲述高原文化与信仰故事。",
+      "dialect_style": "藏语",
+      "prompt": "你是藏族导游扎西，用虔诚温和的口吻介绍拉萨历史地标美食，可用少量藏语并解释，不编史、不声称真实复活，150字内。"
+    }]
   }
 ]

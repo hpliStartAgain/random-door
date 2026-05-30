@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
   current_city_id BIGINT,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
-  UNIQUE KEY uk_anonymous_id (anonymous_id)
+  UNIQUE KEY uk_anonymous_id (anonymous_id),
+  KEY idx_user_current_city (current_city_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS cities (
@@ -27,7 +28,7 @@ CREATE TABLE IF NOT EXISTS cities (
   dialect_explanation TEXT,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
-  KEY idx_city_name (name)
+  UNIQUE KEY uk_city_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS city_tags (
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS city_tags (
   city_id BIGINT NOT NULL,
   tag VARCHAR(64) NOT NULL,
   created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_ct_city_tag (city_id, tag),
   KEY idx_ct_city (city_id),
   KEY idx_ct_tag (tag)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -46,6 +48,7 @@ CREATE TABLE IF NOT EXISTS landmarks (
   image_url VARCHAR(512),
   description TEXT,
   created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_lm_city_name (city_id, name),
   KEY idx_lm_city (city_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -56,6 +59,7 @@ CREATE TABLE IF NOT EXISTS foods (
   image_url VARCHAR(512),
   description TEXT,
   created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_food_city_name (city_id, name),
   KEY idx_food_city (city_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -69,6 +73,7 @@ CREATE TABLE IF NOT EXISTS characters (
   dialect_style TEXT,
   prompt TEXT NOT NULL,
   created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_char_city_name (city_id, name),
   KEY idx_char_city (city_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -82,7 +87,10 @@ CREATE TABLE IF NOT EXISTS city_visits (
   dice_roll_id BIGINT,
   created_at DATETIME NOT NULL,
   KEY idx_cv_user_city (user_id, city_id),
-  KEY idx_cv_user_time (user_id, created_at)
+  KEY idx_cv_user_time (user_id, created_at),
+  KEY idx_cv_city (city_id),
+  KEY idx_cv_from_city (from_city_id),
+  KEY idx_cv_dice_roll (dice_roll_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS dice_rolls (
@@ -95,7 +103,9 @@ CREATE TABLE IF NOT EXISTS dice_rolls (
   target_lat DOUBLE,
   target_lng DOUBLE,
   created_at DATETIME NOT NULL,
-  KEY idx_dr_user_time (user_id, created_at)
+  KEY idx_dr_user_time (user_id, created_at),
+  KEY idx_dr_from_city (from_city_id),
+  KEY idx_dr_to_city (to_city_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS checkins (
@@ -108,7 +118,10 @@ CREATE TABLE IF NOT EXISTS checkins (
   checkin_mode VARCHAR(32),
   created_at DATETIME NOT NULL,
   KEY idx_ck_user_time (user_id, created_at),
-  KEY idx_ck_user_city (user_id, city_id)
+  KEY idx_ck_user_city (user_id, city_id),
+  KEY idx_ck_city (city_id),
+  KEY idx_ck_landmark (landmark_id),
+  KEY idx_ck_visit (visit_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS achievements (
@@ -128,7 +141,8 @@ CREATE TABLE IF NOT EXISTS user_achievements (
   user_id BIGINT NOT NULL,
   achievement_id BIGINT NOT NULL,
   unlocked_at DATETIME NOT NULL,
-  UNIQUE KEY uk_ua_user_ach (user_id, achievement_id)
+  UNIQUE KEY uk_ua_user_ach (user_id, achievement_id),
+  KEY idx_ua_achievement (achievement_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS chat_messages (
@@ -139,5 +153,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   role VARCHAR(16) NOT NULL,
   content TEXT NOT NULL,
   created_at DATETIME NOT NULL,
-  KEY idx_cm_user_char_time (user_id, character_id, created_at)
+  KEY idx_cm_user_char_time (user_id, character_id, created_at),
+  KEY idx_cm_city (city_id),
+  KEY idx_cm_character (character_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

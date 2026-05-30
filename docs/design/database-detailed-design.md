@@ -36,7 +36,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | created_at | DATETIME | NOT NULL | |
 | updated_at | DATETIME | NOT NULL | |
 
-**索引**：UNIQUE(anonymous_id)。
+**索引**：UNIQUE(anonymous_id), INDEX(current_city_id)。
 
 ---
 
@@ -54,7 +54,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | dialect_explanation | TEXT | NULL |
 | created_at / updated_at | DATETIME | NOT NULL |
 
-**索引**：INDEX(name)。
+**索引**：UNIQUE(name)。城市名是 seed 幂等 upsert 的自然键。
 
 ---
 
@@ -67,7 +67,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | created_at | DATETIME | NOT NULL |
 
 **示例 tag**：ancient_capital, dongbei, jiangnan, wuyue, coastal, spicy_food, modern_city, northwest, lingnan。
-**索引**：INDEX(city_id), INDEX(tag)。
+**索引**：UNIQUE(city_id, tag), INDEX(city_id), INDEX(tag)。
 
 ---
 
@@ -81,10 +81,14 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | description | TEXT | NULL |
 | created_at | DATETIME | NOT NULL |
 
+**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是 seed 幂等 upsert 的自然键。
+
 ---
 
 ## 5. foods — 美食表
 结构同 landmarks：id / city_id(INDEX) / name / image_url / description / created_at。
+
+**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是 seed 幂等 upsert 的自然键。
 
 ---
 
@@ -101,6 +105,8 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | prompt | TEXT | NOT NULL | 系统 Prompt（**不下发前端**） |
 | created_at | DATETIME | NOT NULL | |
 
+**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是 seed 幂等 upsert 的自然键。
+
 ---
 
 ## 7. city_visits — 城市访问表（双模式关键表）
@@ -115,7 +121,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | dice_roll_id | BIGINT | NULL | 游戏模式关联掷骰 |
 | created_at | DATETIME | NOT NULL | |
 
-**索引**：INDEX(user_id, city_id), INDEX(user_id, created_at)。
+**索引**：INDEX(user_id, city_id), INDEX(user_id, created_at), INDEX(city_id), INDEX(from_city_id), INDEX(dice_roll_id)。
 
 ---
 
@@ -132,7 +138,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | target_lng | DOUBLE | NULL |
 | created_at | DATETIME | NOT NULL |
 
-**索引**：INDEX(user_id, created_at)。
+**索引**：INDEX(user_id, created_at), INDEX(from_city_id), INDEX(to_city_id)。
 **关系**：DiceRoll 1-1 CityVisit（通过 city_visits.dice_roll_id 回指）。
 
 ---
@@ -149,7 +155,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | checkin_mode | VARCHAR(32) | NULL | free/game |
 | created_at | DATETIME | NOT NULL |
 
-**索引**：INDEX(user_id, created_at), INDEX(user_id, city_id)。
+**索引**：INDEX(user_id, created_at), INDEX(user_id, city_id), INDEX(city_id), INDEX(landmark_id), INDEX(visit_id)。
 **用途**：成就判定的主要数据来源。
 
 ---
@@ -187,7 +193,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | achievement_id | BIGINT | NOT NULL, INDEX |
 | unlocked_at | DATETIME | NOT NULL |
 
-**索引**：UNIQUE(user_id, achievement_id)（防重复解锁）。
+**索引**：UNIQUE(user_id, achievement_id)（防重复解锁）, INDEX(achievement_id)。
 
 ---
 
@@ -202,7 +208,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | content | TEXT | NOT NULL |
 | created_at | DATETIME | NOT NULL |
 
-**索引**：INDEX(user_id, character_id, created_at)（拉取对话历史）。
+**索引**：INDEX(user_id, character_id, created_at)（拉取对话历史）, INDEX(city_id), INDEX(character_id)。
 
 ---
 
@@ -210,3 +216,13 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 - 每个 model struct 对应一表，含 `gorm:"column:...;index"` 与 `json:"..."` tag。
 - json 字段名需与 api-contract.md 一致。
 - created_at/updated_at 用 GORM 自动维护（autoCreateTime/autoUpdateTime）。
+
+---
+
+## 14. Seed 幂等导入
+
+- `backend/internal/seed` 在写库前完整解析并校验 `cities.json` 与 `achievements.json`。
+- 城市固定为 12 个精选城市；每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
+- 启动时在单一事务内执行 upsert；任何一条失败则整体回滚并阻止服务启动，避免半套演示数据。
+- 自然键：`cities.name`、`city_tags(city_id,tag)`、`landmarks(city_id,name)`、`foods(city_id,name)`、`characters(city_id,name)`、`achievements.code`。
+- 重复启动会更新已有内容并补齐缺失内容，不要求手动清库或执行临时脚本。

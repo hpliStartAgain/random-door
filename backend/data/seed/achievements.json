@@ -1,0 +1,13 @@
+[
+  { "code": "first_checkin", "name": "初次打卡", "description": "完成任意一次打卡", "rule_type": "first_checkin", "rule_value": "", "badge_url": "/static/badges/first_checkin.png" },
+  { "code": "ancient_capital_first", "name": "古都初见", "description": "首次打卡一座古都城市", "rule_type": "city_tag", "rule_value": "ancient_capital", "badge_url": "/static/badges/ancient_capital_first.png" },
+  { "code": "ancient_capital_tour", "name": "古都巡礼", "description": "打卡3座古都城市", "rule_type": "tag_count", "rule_value": "ancient_capital:3", "badge_url": "/static/badges/ancient_capital_tour.png" },
+  { "code": "jiangnan_rain", "name": "烟雨江南", "description": "打卡3座江南城市", "rule_type": "tag_count", "rule_value": "jiangnan:3", "badge_url": "/static/badges/jiangnan_rain.png" },
+  { "code": "dongbei_first", "name": "东北初见", "description": "首次打卡东北城市", "rule_type": "city_tag", "rule_value": "dongbei", "badge_url": "/static/badges/dongbei_first.png" },
+  { "code": "foodie_traveler", "name": "美食旅人", "description": "打卡3座美食城市", "rule_type": "tag_count", "rule_value": "spicy_food:3", "badge_url": "/static/badges/foodie_traveler.png" },
+  { "code": "game_first", "name": "大富翁初体验", "description": "游戏模式首次到达城市", "rule_type": "game_visit_count", "rule_value": "1", "badge_url": "/static/badges/game_first.png" },
+  { "code": "destiny_traveler", "name": "命运旅人", "description": "游戏模式到达3座城市", "rule_type": "game_visit_count", "rule_value": "3", "badge_url": "/static/badges/destiny_traveler.png" },
+  { "code": "roamer", "name": "随机漫游家", "description": "游戏模式到达5座城市", "rule_type": "game_visit_count", "rule_value": "5", "badge_url": "/static/badges/roamer.png" },
+  { "code": "go_north", "name": "一路向北", "description": "连续2次掷出北方向", "rule_type": "dice_direction", "rule_value": "北:2", "badge_url": "/static/badges/go_north.png" },
+  { "code": "chosen_voyager", "name": "天选远行者", "description": "单次掷出1200km距离", "rule_type": "dice_distance", "rule_value": "1200", "badge_url": "/static/badges/chosen_voyager.png" }
+]

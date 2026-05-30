@@ -21,6 +21,7 @@ backend/
     geo/        distance.go bearing.go target_point.go city_matcher.go
     ai/         llm_client.go image_client.go prompt_builder.go
     upload/     validator.go storage.go
+    seed/       seed.go
     achievement/ evaluator.go rules.go
     middleware/ cors.go logger.go recover.go rate_limit.go
     config/     config.go
@@ -35,7 +36,7 @@ backend/
 - 主逻辑：
   1. `config.Load()` 读取环境变量/配置；
   2. 初始化 GORM（连接 MySQL，配置连接池 max_open=50）；
-  3. （可选）执行 migrations/schema.sql；如表空则导入 data/seed/*.json；
+  3. 执行 AutoMigrate；通过 `internal/seed` 校验 `SEED_DIR` 下的 JSON，并在事务内幂等 upsert 内容；
   4. 构造各 repository → service → handler 依赖（手动注入）；
   5. `api.NewRouter(...)` 装配 Gin 引擎与中间件；
   6. 监听 `SERVER_PORT` 启动。
@@ -142,6 +143,9 @@ backend/
 - validator.go：校验类型(jpg/jpeg/png/webp)与大小(≤5MB)，否则 415/413。
 - storage.go：UUID 命名，分目录落 uploads/selfies、uploads/generated；防路径穿越。
 
+## 8.1 internal/seed
+- seed.go：读取 `SEED_DIR` 下的 cities.json / achievements.json；校验 12 城内容、成就可达性与 AI Prompt 合规提醒；事务内按自然键幂等 upsert。
+
 ## 9. internal/achievement（详见 achievement-engine-detailed-design.md）
 - rules.go：rule_type 解析器（checkin_count/city_tag/tag_count/game_visit_count/dice_direction/dice_distance/first_checkin）。
 - evaluator.go：Evaluate(userID, repos) 返回满足且未解锁的成就。
@@ -153,4 +157,4 @@ backend/
 - rate_limit.go：上传/AI 接口限流（简单内存令牌桶）。
 
 ## 11. internal/config/config.go
-- Load() 读 env（Viper）：DB_*、SERVER_PORT、LLM_*、IMAGE_*、UPLOAD_*、CORS_*、AI_TIMEOUT_SECONDS。敏感项禁硬编码。
+- Load() 读 env（Viper）：DB_*、SERVER_PORT、SEED_DIR、LLM_*、IMAGE_*、UPLOAD_*、CORS_*、AI_TIMEOUT_SECONDS。敏感项禁硬编码。
