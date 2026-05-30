@@ -138,19 +138,61 @@
 
 - 本 task 代码与文档提交见本轮 git commit。
 
-### Checkpoint A [ ] 完成 Task 1~3 后全面检查-debug循环
+### Checkpoint A [x] 完成 Task 1~3 后全面检查-debug循环
 
 检查需求偏离、代码 bug、`go test ./...`、`go vet ./...`、前端 lint/build 基线、schema/seed 一致性、安全、文档同步和回滚策略；发现问题必须在本检查点内修复并复测。
 
 检查结果：
 
+- 需求方向未偏离：仍为 React/Vite + Go/Gin/GORM 单体 + MySQL，内容保持 12 城；Go 模块扫描未发现 Redis / Kafka / Elasticsearch / 向量库依赖。
+- Tasks 1~3 的完成项复核通过：schema/model/seed 测试仍绿；匿名用户、城市列表详情、自由访问 API 的 handler/service 测试仍绿；全仓后端已可编译。
+- 后端静态审计发现两个初始化前 gofmt 遗留文件：`internal/service/game_service.go`、`internal/upload/validator.go`。
+- 安全审计发现未完成模块的 handler 仍有 500 响应直接回传 `err.Error()`：游戏 init/roll、完成打卡、成就墙；chat 的 404 也直接回传内部包装错误。
+- 前端 `npm run lint` 仍失败：缺少 ESLint 配置。`npm run build` 仍失败：Node/Vite 类型、`ImportMeta.env`、overlay/store 类型漂移、`pannellum-react` 声明、未使用变量等基线问题；这些属于 Task 11~12 的前端修缮范围。
+- 前端失败构建会生成 `tsconfig*.tsbuildinfo`、`vite.config.js`、`vite.config.d.ts` 派生产物，初始 `.gitignore` 未覆盖。
+- Docker 仍不可用：本机找不到 `docker` 命令；同时 `backend/Dockerfile`、静态图片目录仍缺失，属于 Task 19。
+- 文档仍有已知缺口：`docs/agent/git-workflow.md`、`docs/agent/doc-writing.md`、`docs/arch/observability.md`、`docs/design/00-detailed-design-index.md` 不存在；README/Makefile 仍有旧 seed 命令，属于 Task 22。
+- 对后续模块静态扫描仍发现待办：game/chat/checkin/achievement 中有 DB 错误吞掉或错误分类不足；upload 仅按扩展名校验；这些保留给 Task 5~10 和 Task 23，不在本检查点提前扩展业务范围。
+
 修复内容：
+
+- 对 `internal/service/game_service.go`、`internal/upload/validator.go` 执行 gofmt，清除全仓 Go 格式漂移。
+- 将游戏 init/roll、完成打卡、成就墙的 500 响应统一接入脱敏 `writeServiceError`；chat 404 改为稳定 `resource not found`，不再向客户端回传内部错误文本。
+- 在 `.gitignore` 增加前端 TypeScript 构建派生产物规则，并精确清理两轮构建验证生成的 4 个文件。
+- 执行 `go mod tidy` 并锁定 `backend/go.sum`，使 Go 依赖可重复验证。
 
 验证结果：
 
+- `go test ./... -count=1`：通过。
+- `go vet ./...`：通过。
+- `go mod verify`：通过，输出 `all modules verified`。
+- 全量 `gofmt -l cmd internal`：无输出。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+- 数据断言：`CITY_COUNT=12`、`ACH_COUNT=11`、`TABLE_COUNT=12`、`CONTENT_BOUNDS=True`。
+- 禁止依赖扫描：`FORBIDDEN_GO_MODULES=NONE`。
+- 密钥模式扫描：`NO_REAL_SECRET_PATTERN_MATCHES`；`.env`、`frontend/.env`、uploads 和新增前端派生产物均被 `.gitignore` 覆盖。
+- 前端架构静态扫描：`frontend/src` 无组件直连 `fetch`、无 LLM/生图 Key；`AMap.*` 仍只出现在 `MapCanvas.tsx`。
+- API 泄漏静态扫描：handler 中不存在 `errorResp("INTERNAL_ERROR", err.Error())`。
+- `npm run lint`：仍失败，缺 ESLint 配置；已确认属于后续前端 task。
+- `npm run build`：仍失败，错误集合与基线一致；失败生成物已清理。
+- `docker compose config`：未执行成功，本机无 `docker` 可执行文件。
+- UI/UX 运行态：因前端尚不可构建且 Docker 不可用，本检查点无法做浏览器验收；留到前端 task 和 Task 21。
+
 剩余风险：
 
+- 当前仍不是可部署产品：前端 lint/build 未修复、Dockerfile/Compose/静态资源未完成、完整业务 API 和 UI 链路尚未联调。
+- Docker/MySQL 运行态、seed 重复启动、HTTP 冒烟和 Browser UI/UX 仍缺少环境证据；按 Task 19~21 补齐。
+- `go test -race` 仍受本机 CGO 禁用阻断；最终具备 CGO 的环境应补跑。
+- 后续模块已记录的错误处理、事务、上传安全和 AI 合规问题必须在对应 task 修复，不能以当前全仓编译通过代替功能验收。
+- 回滚策略保持按 task 小提交追加修复；本检查点没有执行破坏性 schema 或生产配置修改。
+
+下一步：
+
+- 执行 Task 4：修缮地理随机漫游算法，补齐边界和兜底策略的表驱动测试。
+
 提交：
+
+- 本检查点基础修缮与审计记录提交见本轮 git commit。
 
 ### Task 4 [ ] 修缮地理随机漫游算法
 
