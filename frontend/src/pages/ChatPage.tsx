@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
 export const ChatPage: React.FC = () => {
-  const { id, cid } = useParams();
+  const { id: _id } = useParams();
   const navigate = useNavigate();
 
   return (

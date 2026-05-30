@@ -2,31 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { useCityStore } from '../../store/useCityStore';
 import { useGameStore } from '../../store/useGameStore';
 import { useMapStore } from '../../store/useMapStore';
+import { useUserStore } from '../../store/useUserStore';
 import { CityDetailPanel } from '../CityDetailPanel';
 
 export const Sidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'explore' | 'dice'>('explore');
   const [selectedCity, setSelectedCity] = useState<any | null>(null);
   
-  const { cities, loadCities } = useCityStore();
+  const { cities, loadCities, loadCity } = useCityStore();
   const { roll, rolling, targetCity } = useGameStore();
-  const { flyTo } = useMapStore();
+  const { flyTo, mapInstance } = useMapStore();
+  const { userId, currentCityId } = useUserStore();
 
   useEffect(() => {
     loadCities();
   }, [loadCities]);
 
   const handleRoll = async () => {
-    const target = await roll();
-    if (target) {
-      flyTo(target.lng, target.lat);
-      setSelectedCity(target);
+    if (!userId) return;
+    
+    // Get center from map if available
+    let lat = 39.9042;
+    let lng = 116.4074;
+    if (mapInstance) {
+      const center = mapInstance.getCenter();
+      lat = center.lat;
+      lng = center.lng;
+    }
+    
+    try {
+      const res = await roll(userId, currentCityId || 1, lat, lng);
+      if (res && res.target_city) {
+        flyTo(res.target_city.lng, res.target_city.lat);
+        const detail = await loadCity(res.target_city.id);
+        setSelectedCity(detail);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handleCityClick = (city: any) => {
+  const handleCityClick = async (city: any) => {
     flyTo(city.lng, city.lat);
     setSelectedCity(city);
+    try {
+      const detail = await loadCity(city.id);
+      setSelectedCity(detail);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -91,7 +115,7 @@ export const Sidebar: React.FC = () => {
 
               <div className="absolute bottom-4 left-4 right-4">
                 <h3 className="text-white text-xl font-bold leading-tight">{city.name}</h3>
-                <p className="text-white/90 text-sm mt-1">{city.intro}</p>
+                <p className="text-white/90 text-sm mt-1">{city.province}</p>
                 <div className="flex gap-2 mt-2">
                   {city.tags?.map(tag => (
                     <span key={tag} className="text-[10px] px-2 py-0.5 bg-black/30 text-white rounded-full backdrop-blur-sm border border-white/20">{tag}</span>

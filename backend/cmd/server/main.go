@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/your-org/city-roam/backend/internal/ai"
 	"github.com/your-org/city-roam/backend/internal/api"
 	"github.com/your-org/city-roam/backend/internal/config"
@@ -21,6 +22,9 @@ import (
 )
 
 func main() {
+	// Load .env if exists
+	_ = godotenv.Load("../.env")
+
 	// 1. Load config
 	cfg := config.Load()
 

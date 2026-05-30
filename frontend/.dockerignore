@@ -1,0 +1,7 @@
+# 避免把本地（Windows）依赖与构建产物带进镜像，防止原生二进制架构不匹配
+node_modules
+dist
+.vite
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store

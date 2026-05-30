@@ -1,11 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useViewStore } from '../store/useViewStore';
+import { useUserStore } from '../store/useUserStore';
+import { api } from '../api';
 
 export const RightDrawer: React.FC = () => {
-  const { drawer, closeDrawer } = useViewStore();
+  const { drawer, closeDrawer, activeCityId } = useViewStore();
+  const { userId } = useUserStore();
   const [chatInput, setChatInput] = useState('');
+  const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>([]);
+  const [loading, setLoading] = useState(false);
   
   const isOpen = drawer.isOpen;
+
+  // Reset messages when opening a new chat
+  useEffect(() => {
+    if (isOpen && drawer.type === 'chat') {
+      setMessages([]);
+      setChatInput('');
+    }
+  }, [isOpen, drawer.data?.id]);
+
+  const handleSend = async () => {
+    if (!chatInput.trim() || !userId || !activeCityId || !drawer.data || loading) return;
+    
+    const userMsg = chatInput.trim();
+    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setChatInput('');
+    setLoading(true);
+    
+    try {
+      const res = await api.chat(userId, activeCityId, drawer.data.id, userMsg);
+      setMessages(prev => [...prev, { role: 'assistant', content: res.reply }]);
+    } catch (e) {
+      console.error(e);
+      setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，我暂时无法回答。' }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
   
   return (
     <>
@@ -38,23 +77,38 @@ export const RightDrawer: React.FC = () => {
                      🗿
                    </div>
                    <div>
-                     <h4 className="font-bold text-primary mb-1 text-lg">{drawer.data.name} <span className="text-xs font-normal text-muted-foreground ml-1">· {drawer.data.dynasty}</span></h4>
-                     <p className="text-sm text-foreground/80 leading-relaxed">{drawer.data.desc}</p>
+                     <h4 className="font-bold text-primary mb-1 text-lg">{drawer.data.name} <span className="text-xs font-normal text-muted-foreground ml-1">· {drawer.data.character_type === 'culture' ? '文化符号' : drawer.data.character_type}</span></h4>
+                     <p className="text-sm text-foreground/80 leading-relaxed">{drawer.data.dialect_style}</p>
                    </div>
                 </div>
 
-                {/* 聊天气泡 Demo */}
+                {/* 聊天气泡 */}
                 <div className="flex flex-col gap-4 mt-6">
-                  <div className="self-end bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[80%] text-sm shadow-md">
-                    久仰大名，敢问阁下当年在长安是怎样一番光景？
-                  </div>
-                  <div className="self-start bg-card border border-border px-4 py-2.5 rounded-2xl rounded-tl-sm max-w-[80%] text-sm shadow-md flex gap-3 items-start">
-                    <span className="text-xl pt-1">🗿</span>
-                    <div>
-                      <span className="text-xs text-primary font-bold mb-1 block">{drawer.data.name}</span>
-                      “哈哈哈哈，长安市上酒家眠，天子呼来不上船！当年的风月，你这后生可懂？”
+                  {messages.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-4">
+                      发送消息开始跨时空对话
                     </div>
-                  </div>
+                  )}
+                  {messages.map((msg, i) => (
+                    msg.role === 'user' ? (
+                      <div key={i} className="self-end bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[80%] text-sm shadow-md whitespace-pre-wrap">
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div key={i} className="self-start bg-card border border-border px-4 py-2.5 rounded-2xl rounded-tl-sm max-w-[80%] text-sm shadow-md flex gap-3 items-start">
+                        <span className="text-xl pt-1">🗿</span>
+                        <div>
+                          <span className="text-xs text-primary font-bold mb-1 block">{drawer.data.name}</span>
+                          <span className="whitespace-pre-wrap">{msg.content}</span>
+                        </div>
+                      </div>
+                    )
+                  ))}
+                  {loading && (
+                    <div className="self-start bg-card border border-border px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm shadow-md flex gap-2 items-center text-muted-foreground">
+                      <span className="animate-pulse">思考中...</span>
+                    </div>
+                  )}
                 </div>
              </div>
            )}
@@ -66,7 +120,7 @@ export const RightDrawer: React.FC = () => {
                   🍜
                 </div>
                 <p className="text-muted-foreground leading-relaxed text-sm">
-                  {drawer.data.desc}
+                  {drawer.data.description}
                 </p>
                 <button className="w-full py-3 mt-4 bg-primary text-primary-foreground font-bold rounded-xl hover:opacity-90 transition-opacity shadow-sm">
                   保存图集至本地
@@ -83,10 +137,16 @@ export const RightDrawer: React.FC = () => {
                 type="text" 
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
                 placeholder="在此输入对话，或使用语音..."
-                className="w-full pl-5 pr-14 py-3.5 bg-card border border-border rounded-full text-sm outline-none focus:border-primary/50 transition-colors shadow-inner"
+                className="w-full pl-5 pr-14 py-3.5 bg-card border border-border rounded-full text-sm outline-none focus:border-primary/50 transition-colors shadow-inner disabled:opacity-50"
               />
-              <button className="absolute right-2 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white hover:scale-105 transition-transform shadow-md">
+              <button 
+                onClick={handleSend}
+                disabled={loading || !chatInput.trim()}
+                className="absolute right-2 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white hover:scale-105 transition-transform shadow-md disabled:opacity-50 disabled:hover:scale-100"
+              >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
               </button>
             </div>

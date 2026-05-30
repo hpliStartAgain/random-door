@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { apiClient } from '../api/client';
+import { api } from '../api';
 
 interface UserState {
   userId: number | null;
@@ -22,15 +22,13 @@ export const useUserStore = create<UserState>()(
           set({ anonymousId: anonId });
         }
         try {
-          const res = await apiClient.post('/users/anonymous', { anonymous_id: anonId });
-          set({ userId: (res as any).user_id });
+          const res = await api.createAnonymousUser(anonId);
+          set({ userId: res.user_id });
         } catch (error) {
           console.error('Failed to init user:', error);
         }
       },
     }),
-    {
-      name: 'city-roam-user',
-    }
+    { name: 'city-roam-user' }
   )
 );

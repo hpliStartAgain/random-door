@@ -1,16 +1,35 @@
 import React, { useState } from 'react';
 import { useViewStore } from '../../store/useViewStore';
 import { useGameStore } from '../../store/useGameStore';
+import { useUserStore } from '../../store/useUserStore';
+import { useMapStore } from '../../store/useMapStore';
 
 export const DiceConsole: React.FC = () => {
   const { setView } = useViewStore();
   const { roll, rolling, targetCity } = useGameStore();
   const [showResult, setShowResult] = useState(false);
 
+  const { userId, currentCityId } = useUserStore();
+  const { mapInstance } = useMapStore();
+
   const handleRoll = async () => {
+    if (!userId) return;
+    
+    let lat = 39.9042;
+    let lng = 116.4074;
+    if (mapInstance) {
+      const center = mapInstance.getCenter();
+      lat = center.lat;
+      lng = center.lng;
+    }
+
     setShowResult(false);
-    await roll(1, 39.9, 116.4);
-    setShowResult(true);
+    try {
+      await roll(userId, currentCityId || 1, lat, lng);
+      setShowResult(true);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (

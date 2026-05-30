@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	aiPkg "github.com/your-org/city-roam/backend/internal/ai"
@@ -35,11 +34,11 @@ func (h *ChatHandler) Chat(c *gin.Context) {
 
 	reply, err := h.svc.Chat(c.Request.Context(), req.UserID, req.CityID, req.CharacterID, req.Message)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			c.JSON(http.StatusNotFound, errorResp("NOT_FOUND", "resource not found"))
+		if errors.Is(err, service.ErrNotFound) || errors.Is(err, service.ErrInvalidParam) {
+			writeServiceError(c, err)
 			return
 		}
-		if strings.Contains(err.Error(), "ai timeout") || errors.Is(err, aiPkg.ErrAITimeout) {
+		if errors.Is(err, aiPkg.ErrAITimeout) {
 			c.JSON(http.StatusGatewayTimeout, errorResp("AI_TIMEOUT", "AI service timeout"))
 			return
 		}

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,7 +44,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, "Songti SC", "SimSun", serif;
+    font-family: "Noto Sans SC", ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .font-serif-display {
+    font-family: "Noto Serif SC", ui-serif, Georgia, "Songti SC", serif;
   }
 }
 
@@ -55,4 +60,20 @@
   .sidebar-container {
     @apply bg-background border-r border-border/80 shadow-[4px_0_24px_rgba(0,0,0,0.02)];
   }
+
+  /* TimeFriends 风格的信息面板 */
+  .panel {
+    @apply bg-white rounded-2xl border border-border overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.03)];
+  }
+  .panel-header {
+    @apply px-5 py-3.5 border-b border-border/60 text-xs font-semibold text-muted-foreground uppercase tracking-[0.08em] flex items-center gap-2;
+  }
+  .panel-body {
+    @apply p-5;
+  }
+  .pill {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold;
+  }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

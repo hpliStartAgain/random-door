@@ -17,11 +17,12 @@ logs:          ## 查看后端日志
 	docker compose logs -f app
 
 # ---------- 数据 ----------
-migrate:       ## 执行建表（若未在 mysql 初始化时自动执行）
-	docker compose exec -T mysql sh -c 'mysql -u$(DB_USER) -p$(DB_PASSWORD) $(DB_NAME)' < backend/migrations/schema.sql
+# MySQL 已抽离为外部实例，自动建表与自动导入（Seed）由后端启动时自动完成。
+migrate:       ## 已废弃，应用启动自动执行
+	@echo "Migration is auto-executed on backend startup."
 
-seed:          ## 导入 12 城 + 成就种子（由后端提供 seed 子命令或启动自动导入）
-	docker compose exec app /app/server -seed
+seed:          ## 已废弃，应用启动自动执行
+	@echo "Seeding is auto-executed on backend startup."
 
 # ---------- 质量 ----------
 lint:          ## 后端 + 前端静态检查

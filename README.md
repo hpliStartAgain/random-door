@@ -7,7 +7,8 @@
 浏览器 (React + 高德地图 3D + Pannellum 360全景)
         │ HTTP
         ▼
-   Go 后端 (Gin + GORM) - 待开发
+   Go 后端 (Gin + GORM)
+
    ├─ 业务 / 随机算法 / AI 编排 / 成就判定
         │                 │
         ▼                 ▼
@@ -28,9 +29,8 @@ cp .env.example .env
 # 3. 一键启动
 docker compose up -d        # 或 make up
 
-# 4. 初始化数据（如未在启动时自动导入）
-make migrate                # 执行 schema.sql
-make seed                   # 导入 12 城市 + 成就种子
+# 4. 初始化数据（后端会自动执行建表与 seed 导入，无需手动执行）
+# make migrate 和 make seed 已废弃
 
 # 5. 访问
 # 前端: http://localhost           （或 Caddy 暴露端口）
@@ -42,8 +42,8 @@ make seed                   # 导入 12 城市 + 成就种子
 |---|---|
 | `make up` / `make down` | 启停所有容器 |
 | `make build` | 构建镜像 |
-| `make migrate` | 建表 |
-| `make seed` | 导入种子数据 |
+| `make migrate` | (已废弃，启动时自动建表) |
+| `make seed` | (已废弃，启动时自动导入) |
 | `make logs` | 查看后端日志 |
 | `make lint` / `make test` | 检查 / 测试 |
 

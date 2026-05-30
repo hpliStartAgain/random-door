@@ -3,6 +3,7 @@ package upload
 import (
 	"errors"
 	"mime/multipart"
+	"net/http"
 	"path/filepath"
 	"strings"
 )
@@ -36,5 +37,20 @@ func (v *Validator) Validate(fh *multipart.FileHeader) error {
 	if !v.AllowedTypes[ext] {
 		return ErrUnsupportedType
 	}
+
+	file, err := fh.Open()
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	buf := make([]byte, 512)
+	n, _ := file.Read(buf)
+	contentType := http.DetectContentType(buf[:n])
+
+	if !strings.HasPrefix(contentType, "image/") {
+		return ErrUnsupportedType
+	}
+
 	return nil
 }

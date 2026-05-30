@@ -1,5 +1,5 @@
 # docker-compose.yml — 2C2G 单机一键部署
-# 对应概要 22 章 / deployment-architecture.md。不含 nginx，前端静态可由 caddy 托管或 Go 直接 serve。
+# 数据库使用外部 MySQL 实例，通过 .env 中的 DB_HOST/DB_PORT 配置连接。
 version: "3.8"
 
 services:
@@ -9,9 +9,6 @@ services:
       dockerfile: Dockerfile
     container_name: city_roam_app
     env_file: .env
-    depends_on:
-      mysql:
-        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
@@ -23,51 +20,23 @@ services:
         limits:
           memory: 320M
 
-  mysql:
-    image: mysql:8.0
-    container_name: city_roam_mysql
-    command:
-      - --innodb_buffer_pool_size=256M
-      - --max_connections=50
-      - --performance_schema=OFF
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - mysql_data:/var/lib/mysql
-      # 首次启动自动执行建表（可选；也可由 app 启动时迁移）
-      - ./backend/migrations/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 900M
-
-  # 可选：托管前端 dist + 反向代理 /api。MVP 也可省略。
+  # 前端：多阶段构建（node 打包 → caddy 托管）+ 反向代理 /api 到后端。
+  # 高德 Key 由 frontend/.env 在构建期被 Vite 自动注入，无需 build args。
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: city_roam_caddy
     depends_on:
       - app
     ports:
       - "80:80"
     volumes:
-      - ./frontend/dist:/srv:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - static:/srv/static:ro
       - uploads:/srv/uploads:ro
     restart: unless-stopped
 
 volumes:
-  mysql_data:
   uploads:
   static:

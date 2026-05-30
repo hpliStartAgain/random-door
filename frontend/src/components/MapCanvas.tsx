@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import AMapLoader from '@amap/amap-jsapi-loader';
-import { useViewStore } from '../store/useViewStore';
 import { useMapStore } from '../store/useMapStore';
 import { useCityStore } from '../store/useCityStore';
 
 export const MapCanvas: React.FC = () => {
-  const { currentView } = useViewStore();
   const { setMapContext, flyTo } = useMapStore();
   const { cities } = useCityStore();
   const mapContainer = useRef<HTMLDivElement>(null);

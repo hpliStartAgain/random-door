@@ -5,7 +5,7 @@ import { useViewStore } from '../store/useViewStore';
 export const StreetViewCanvas: React.FC = () => {
   const { setCanvasMode, streetTarget } = useViewStore();
 
-  const panoramaUrl = streetTarget?.panoramaUrl || 'https://pannellum.org/images/cerro-toco-0.jpg';
+  const panoramaUrl = streetTarget?.cover_image_url || 'https://pannellum.org/images/cerro-toco-0.jpg';
 
   return (
     <div className="absolute inset-0 z-0 bg-black flex flex-col overflow-hidden">

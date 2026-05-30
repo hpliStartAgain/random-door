@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useUserStore } from './store/useUserStore';
 import { useViewStore } from './store/useViewStore';
 import { MapCanvas } from './components/MapCanvas';
@@ -6,6 +6,7 @@ import { StreetViewCanvas } from './components/StreetViewCanvas';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { RightDrawer } from './components/RightDrawer';
+import { AchievementPage } from './pages/AchievementPage';
 
 function App() {
   const initUser = useUserStore((state) => state.initUser);
@@ -42,6 +43,13 @@ function App() {
 
       {/* 全局右侧抽屉 (聊天室/图集) */}
       <RightDrawer />
+
+      {/* 全局覆盖层 (成就墙等) */}
+      {useViewStore(s => s.currentView) === 'ACHIEVEMENT' && (
+         <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur overflow-y-auto">
+           <AchievementPage />
+         </div>
+      )}
     </div>
   );
 }

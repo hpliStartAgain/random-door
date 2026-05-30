@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/your-org/city-roam/backend/internal/middleware"
 )
@@ -31,6 +33,11 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 
 	// Rate limiter for AI endpoints
 	aiLimiter := middleware.RateLimit(aiRateLimit, 5)
+
+	// Health check
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	// API routes
 	api := r.Group("/api")

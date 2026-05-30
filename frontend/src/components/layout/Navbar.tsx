@@ -16,7 +16,10 @@ export const Navbar: React.FC = () => {
       </div>
       
       <div className="flex items-center gap-4">
-        <button className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+        <button 
+          onClick={() => setView('ACHIEVEMENT')}
+          className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
           成就墙
         </button>
         <div className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground cursor-pointer hover:bg-card">

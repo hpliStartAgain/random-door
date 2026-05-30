@@ -7,7 +7,7 @@ export const GameModePage: React.FC = () => {
   const { roll, rolling, targetCity } = useGameStore();
 
   const handleRoll = async () => {
-    await roll(1, 39.9, 116.4); // 假装起点是北京
+    await roll(1, 1, 0, 0);
   };
 
   return (
