@@ -237,7 +237,7 @@
 
 - 本 task 算法、文档和测试提交见本轮 git commit。
 
-### Task 5 [ ] 修缮游戏 init/roll API 与访问记录
+### Task 5 [x] 修缮游戏 init/roll API 与访问记录
 
 完成 `POST /api/game/init` 和 `POST /api/game/roll`，确保位置默认值、骰子、方向、距离、目标城市、roll 与 visit 记录一致。
 
@@ -245,13 +245,37 @@
 
 完成内容：
 
+- 将 `GameService` 从直接持有 `*gorm.DB` 和具体 repo 收敛为四个小接口（`GameUserFinder` / `GameCityRepository` / `GameVisitReader` / `GameStore`），保持 api → service → repository 单向分层，并支持离线 fake 测试。
+- `Init`：补 `user_id>0`、坐标范围（仅在非默认时）、用户存在性校验；保留 lat==0&&lng==0 默认北京；空城市/匹配失败归为脱敏 500。
+- `Roll`：补 `user_id>0`、`from_city_id>0`、坐标范围、用户存在性、from city 存在性校验；`ListVisitedCityIDs` 错误不再被吞，归为 500。
+- 新增 `geo.IntnSource` 注入（`WithRandSource`），生产仍用标准库随机源，测试可注入固定方向/距离序列。
+- 骰子+访问写入抽到新 `repository.GameStore.CreateRollWithVisit`，在单事务内先写 `dice_rolls` 再用其 ID 关联写 `city_visits`（`visit_mode=game`、`source=dice_roll`、`from_city_id`、`dice_roll_id`），失败整体回滚。
+- 更新 `main.go` 依赖注入：构造 `GameStore` 并以新签名装配 `GameService`。
+- 新增 `game_service_test.go`（11 子用例）与 `game_handler_test.go`（成功链路 + 6 错误用例）。
+
 验证结果：
+
+- `go build ./...`：通过。
+- `go test ./... -count=1`：通过；`go test ./internal/service ./internal/api -count=10`：通过，重复稳定。
+- `go vet ./...`：通过。
+- `gofmt -l cmd internal`：无输出。
+- `git diff --check`：通过（仅 Windows LF/CRLF 提示）。
+- 合同对照：Init 返回 `nearest_city`；Roll 返回 `visit_id/dice_roll_id/direction/distance_km/target_point/target_city`，写库字段经测试断言；错误映射 400/404/500 经 handler 测试断言，内部错误文本不外泄。
+- 确定性 roll：注入方向 idx=5、距离 idx=4 → `西南`/`800`，与契约示例一致；目标城市排除起点城。
 
 剩余风险：
 
+- 本机无 Docker，真实 MySQL 事务原子性与两条 API 的 HTTP 联调留到 Task 19/20；`GameStore` 事务逻辑仅以离线 fake 验证编排。
+- `Roll` handler 对 `lat/lng` 用 `binding:"required"`，理论上拒绝 0 值坐标；中国城市坐标不为 0，MVP 可接受。
+- Init 无法区分“未传坐标”与真实 (0,0)，按契约默认北京。
+
 下一步：
 
+- 执行 Task 6：修缮成就引擎与成就墙 API。
+
 提交：
+
+- 本 task 代码与测试提交见本轮 git commit。
 
 ### Task 6 [ ] 修缮成就引擎与成就墙 API
 

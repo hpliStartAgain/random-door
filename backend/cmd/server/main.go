@@ -86,7 +86,8 @@ func main() {
 
 	citySvc := service.NewCityService(cityRepo)
 	visitSvc := service.NewVisitService(userRepo, cityRepo, visitRepo)
-	gameSvc := service.NewGameService(db, cityRepo, visitRepo, diceRepo)
+	gameStore := repository.NewGameStore(db, diceRepo, visitRepo)
+	gameSvc := service.NewGameService(userRepo, cityRepo, visitRepo, gameStore)
 	chatSvc := service.NewChatService(cityRepo, chatRepo, llmClient)
 	achSvc := service.NewAchievementService(db, achRepo)
 	checkinSvc := service.NewCheckinService(db, cityRepo, checkinRepo, imageClient, storage, achSvc)
