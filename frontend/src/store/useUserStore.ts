@@ -9,6 +9,19 @@ interface UserState {
   initUser: () => Promise<void>;
 }
 
+/** 兼容 HTTP 非安全上下文的 UUID v4 生成器（回退到 Math.random） */
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // 回退：RFC 4122 UUID v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
@@ -18,7 +31,7 @@ export const useUserStore = create<UserState>()(
       initUser: async () => {
         let anonId = get().anonymousId;
         if (!anonId) {
-          anonId = crypto.randomUUID();
+          anonId = generateUUID();
           set({ anonymousId: anonId });
         }
         try {
