@@ -194,7 +194,7 @@
 
 - 本检查点基础修缮与审计记录提交见本轮 git commit。
 
-### Task 4 [ ] 修缮地理随机漫游算法
+### Task 4 [x] 修缮地理随机漫游算法
 
 对齐八方向、距离档位、球面目标点、Haversine 距离、最近城市匹配和兜底策略，覆盖边界条件。
 
@@ -202,13 +202,40 @@
 
 完成内容：
 
+- 对照 `geo-algorithm-detailed-design.md` 审计并修复四个 geo 文件：八方向、六档距离、球面正算、Haversine 与最近城市匹配。
+- 为方向和距离新增最小 `IntnSource` 抽象及 `RandomDirectionWithRand` / `RandomDistanceWithRand`，生产仍使用标准库随机源，测试可注入固定序列逐档验证。
+- 为 Haversine 的中间值 `a` 增加 `[0,1]` 夹紧，避免浮点误差在对跖点附近触发 `sqrt(1-a)` 非法值。
+- 将目标点经度归一化抽成健壮函数，支持跨 ±180° 经线与任意圈数的输入经度，稳定输出 `[-180,180)`。
+- 为城市匹配增加目标点和城市坐标合法性校验；空城市、仅当前城或非法坐标返回可识别错误。
+- 修正详设中的不可达兜底矛盾：目标点已经包含随机方向和距离；匹配器现在始终排除当前城，优先在未访问组中选距目标点最近城市，全部访问过时在全部非当前城中选最近城市并允许重复。
+- 删除重复施加方向偏差的 `DirectionDeg`；同距离时按较小 `city_id` 稳定决胜，输入顺序不再影响结果。
+- 同步 `docs/design/geo-algorithm-detailed-design.md`、`docs/arch/backend-detailed-design.md` 和 `game_service.go` 调用参数。
+- 新增 4 个 geo 测试文件、12 个测试入口，覆盖方向映射、距离档位、随机包装、北京到西安、赤道一度、对跖点、对称性、跨日期变更线、经度归一化、球面距离回算、排除当前城、优先未访问、全访问重复、稳定决胜、空城市、仅当前城和非法坐标。
+
 验证结果：
+
+- `go test ./internal/geo -count=100`：通过，重复执行稳定。
+- `go test ./internal/geo -coverprofile=...` 与 `go tool cover -func=...`：geo 包语句覆盖率 `100.0%`。
+- `go test ./... -count=1`：通过。
+- `go vet ./...`：通过。
+- 全量 `gofmt -l cmd internal`：无输出。
+- `git diff --check`：通过，仅有 Windows LF/CRLF 提示。
+- 静态搜索 `DirectionDeg|兜底[1234]|方向优先`：无残留旧算法引用。
+- 前端构建派生产物检查：4 个临时文件均不存在。
 
 剩余风险：
 
+- Task 4 只负责纯 geo 算法。`POST /api/game/init`、`POST /api/game/roll` 的用户、城市、经纬度校验和事务一致性仍需在 Task 5 修缮并测试。
+- 当前机器没有 Docker，尚未以真实 MySQL 和 HTTP 链路验证骰子记录与访问记录；运行态联调留到 Task 19/20。
+- 随机方向和距离使用标准库伪随机源，适合游戏漫游而非安全用途；本产品不将其用于认证、密钥或概率付费。
+
 下一步：
 
+- 执行 Task 5：修缮游戏 init/roll API 与访问记录，补齐输入校验、错误分类和事务测试。
+
 提交：
+
+- 本 task 算法、文档和测试提交见本轮 git commit。
 
 ### Task 5 [ ] 修缮游戏 init/roll API 与访问记录
 

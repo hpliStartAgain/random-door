@@ -112,7 +112,6 @@ func (s *GameService) Roll(ctx context.Context, userID, fromCityID int64, lat, l
 	matched, err := geo.MatchNearestCity(points, tLat, tLng, geo.MatchOptions{
 		ExcludeCityID:  fromCityID,
 		VisitedCityIDs: visitedIDs,
-		DirectionDeg:   dir.Bearing,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("match city: %w", err)

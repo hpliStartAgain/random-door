@@ -132,7 +132,7 @@ backend/
 - distance.go：Haversine(lat1,lng1,lat2,lng2) float64 km。
 - bearing.go：8 方向枚举 + RandomDirection() (name,deg)。
 - target_point.go：TargetPoint(lat,lng,bearingDeg,distKm) (lat2,lng2)；RandomDistance() int。
-- city_matcher.go：MatchNearestCity(cities, target, opts) 含过滤当前/优先未访问/兜底 4 步。
+- city_matcher.go：MatchNearestCity(cities, target, opts) 过滤当前城、优先未访问；全部访问过时允许重复并按目标点选最近城市。
 
 ## 7. internal/ai（详见 ai-orchestration-detailed-design.md）
 - llm_client.go：Chat(ctx, systemPrompt, userMsg) (string,error)，超时+重试。
