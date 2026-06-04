@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -76,7 +77,7 @@ func (c *ImageClient) Generate(ctx context.Context, selfiePath, refImagePath, pr
 		imgBytes, err := c.doRequest(ctx, data)
 		if err != nil {
 			lastErr = err
-			if ctx.Err() != nil {
+			if errors.Is(err, ErrAITimeout) {
 				return nil, ErrAITimeout
 			}
 			slog.Warn("image generation failed, retrying", "attempt", attempt+1, "error", err)

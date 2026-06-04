@@ -64,11 +64,19 @@ func (h *CheckinHandler) GenerateImage(c *gin.Context) {
 
 	result, err := h.svc.GenerateImage(c.Request.Context(), userID, cityID, landmarkID, selfiePath)
 	if err != nil {
+		if errors.Is(err, service.ErrNotFound) || errors.Is(err, service.ErrInvalidParam) {
+			writeServiceError(c, err)
+			return
+		}
 		if errors.Is(err, aiPkg.ErrAITimeout) {
 			c.JSON(http.StatusGatewayTimeout, errorResp("AI_TIMEOUT", "image generation timeout"))
 			return
 		}
-		c.JSON(http.StatusBadGateway, errorResp("AI_UPSTREAM_ERROR", "image generation failed"))
+		if errors.Is(err, aiPkg.ErrAIUpstream) {
+			c.JSON(http.StatusBadGateway, errorResp("AI_UPSTREAM_ERROR", "image generation failed"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "internal server error"))
 		return
 	}
 

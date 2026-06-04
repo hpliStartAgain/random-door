@@ -52,7 +52,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
       formData.append('landmark_id', firstLandmarkId.toString());
       
       const imgRes = await api.generateImage(formData);
-      const chkRes = await api.createCheckin(userId, city.id, undefined, undefined, imgRes.generated_image_url);
+      const chkRes = await api.createCheckin(userId, city.id, firstLandmarkId, undefined, imgRes.generated_image_url);
       
       setCheckinResult({
         imageUrl: imgRes.generated_image_url,

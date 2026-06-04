@@ -94,7 +94,8 @@ func main() {
 	gameSvc := service.NewGameService(userRepo, cityRepo, visitRepo, gameStore)
 	chatSvc := service.NewChatService(cityRepo, chatRepo, llmClient)
 	achSvc := service.NewAchievementService(db, achRepo)
-	checkinSvc := service.NewCheckinService(db, cityRepo, checkinRepo, imageClient, storage, achSvc)
+	checkinStore := repository.NewCheckinStore(db, checkinRepo)
+	checkinSvc := service.NewCheckinService(userRepo, cityRepo, checkinStore, imageClient, storage)
 
 	handlers := api.Handlers{
 		City:        api.NewCityHandler(citySvc),

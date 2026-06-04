@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -10,13 +11,18 @@ import (
 	"gorm.io/gorm"
 )
 
+type checkinUserFinder interface {
+	FindByID(ctx context.Context, id int64) (*model.User, error)
+}
+
 type checkinCityRepo interface {
 	FindByID(ctx context.Context, id int64) (*model.City, error)
 	ListLandmarks(ctx context.Context, cityID int64) ([]model.Landmark, error)
 }
 
-type checkinRepo interface {
-	Create(ctx context.Context, checkin *model.Checkin) error
+// checkinStore writes a checkin and evaluates achievements in a single transaction.
+type checkinStore interface {
+	CreateAndEvaluate(ctx context.Context, checkin *model.Checkin) ([]model.Achievement, error)
 }
 
 type imageGenerator interface {
@@ -28,25 +34,23 @@ type imageStorage interface {
 }
 
 type CheckinService struct {
-	db          *gorm.DB
+	userRepo    checkinUserFinder
 	cityRepo    checkinCityRepo
-	checkinRepo checkinRepo
+	store       checkinStore
 	imageClient imageGenerator
 	storage     imageStorage
-	achService  *AchievementService
 }
 
 func NewCheckinService(
-	db *gorm.DB,
+	userRepo checkinUserFinder,
 	cityRepo checkinCityRepo,
-	checkinRepo checkinRepo,
+	store checkinStore,
 	imageClient imageGenerator,
 	storage imageStorage,
-	achService *AchievementService,
 ) *CheckinService {
 	return &CheckinService{
-		db: db, cityRepo: cityRepo, checkinRepo: checkinRepo,
-		imageClient: imageClient, storage: storage, achService: achService,
+		userRepo: userRepo, cityRepo: cityRepo, store: store,
+		imageClient: imageClient, storage: storage,
 	}
 }
 
@@ -61,6 +65,9 @@ func (s *CheckinService) GenerateImage(ctx context.Context, userID, cityID, land
 	// Get city and landmark info for prompt
 	city, err := s.cityRepo.FindByID(ctx, cityID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, notFound("city not found")
+		}
 		return nil, fmt.Errorf("find city: %w", err)
 	}
 
@@ -124,8 +131,22 @@ type AchievementBrief struct {
 	Description *string `json:"description,omitempty"`
 }
 
-// Create records a check-in and evaluates achievements.
+// Create records a check-in and evaluates achievements within a single transaction.
 func (s *CheckinService) Create(ctx context.Context, req CreateCheckinRequest) (*CreateCheckinResult, error) {
+	// checkins has no FK constraints, so verify references explicitly.
+	if _, err := s.userRepo.FindByID(ctx, req.UserID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, notFound("user not found")
+		}
+		return nil, fmt.Errorf("find user: %w", err)
+	}
+	if _, err := s.cityRepo.FindByID(ctx, req.CityID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, notFound("city not found")
+		}
+		return nil, fmt.Errorf("find city: %w", err)
+	}
+
 	checkin := &model.Checkin{
 		UserID:            req.UserID,
 		CityID:            req.CityID,
@@ -134,18 +155,9 @@ func (s *CheckinService) Create(ctx context.Context, req CreateCheckinRequest) (
 		GeneratedImageURL: req.GeneratedImageURL,
 	}
 
-	if err := s.checkinRepo.Create(ctx, checkin); err != nil {
+	newAchs, err := s.store.CreateAndEvaluate(ctx, checkin)
+	if err != nil {
 		return nil, fmt.Errorf("create checkin: %w", err)
-	}
-
-	// Evaluate achievements
-	var newAchs []model.Achievement
-	if s.achService != nil {
-		var achErr error
-		newAchs, achErr = s.achService.Evaluate(ctx, req.UserID)
-		if achErr != nil {
-			slog.Warn("achievement evaluation failed", "error", achErr)
-		}
 	}
 
 	achBriefs := make([]AchievementBrief, 0, len(newAchs))

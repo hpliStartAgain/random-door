@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/your-org/city-roam/backend/internal/achievement"
 	"github.com/your-org/city-roam/backend/internal/model"
 	"github.com/your-org/city-roam/backend/internal/repository"
 	"gorm.io/gorm"
@@ -30,11 +29,6 @@ func (s *AchievementService) ensureUserExists(ctx context.Context, userID int64)
 		return notFound("user not found")
 	}
 	return nil
-}
-
-// Evaluate runs achievement evaluation for a user.
-func (s *AchievementService) Evaluate(ctx context.Context, userID int64) ([]model.Achievement, error) {
-	return achievement.Evaluate(ctx, userID, achievement.Repos{DB: s.db})
 }
 
 // WallResult is the response for the achievement wall endpoint.
