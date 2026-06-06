@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUserStore } from './store/useUserStore';
 import { useViewStore } from './store/useViewStore';
 import { MapCanvas } from './components/MapCanvas';
@@ -7,10 +7,15 @@ import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { RightDrawer } from './components/RightDrawer';
 import { AchievementPage } from './pages/AchievementPage';
+import { WelcomeOverlay } from './components/overlays/WelcomeOverlay';
+import { DiceConsole } from './components/overlays/DiceConsole';
+import { Toast } from './components/Toast';
+import { AdminPage } from './pages/AdminPage';
 
 function App() {
   const initUser = useUserStore((state) => state.initUser);
-  const { canvasMode } = useViewStore();
+  const { canvasMode, currentView, hasEntered } = useViewStore();
+  const [showAdmin, setShowAdmin] = useState(false);
 
   useEffect(() => {
     initUser();
@@ -18,7 +23,7 @@ function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-background">
-      <Navbar />
+      <Navbar onAdmin={() => setShowAdmin(true)} />
       
       {/* 侧边栏和底图/街景容器 */}
       <div className="absolute top-0 left-0 w-full h-full pt-[60px] flex">
@@ -38,6 +43,13 @@ function App() {
               <StreetViewCanvas />
             </div>
           )}
+
+          {/* 随机漫游骰子台（覆盖在地图区域上方） */}
+          {currentView === 'GAME_DICE' && (
+            <div className="absolute inset-0 z-20">
+              <DiceConsole />
+            </div>
+          )}
         </main>
       </div>
 
@@ -50,6 +62,15 @@ function App() {
            <AchievementPage />
          </div>
       )}
+
+      {/* 首屏欢迎页（未进入时全屏遮罩） */}
+      {!hasEntered && <WelcomeOverlay />}
+
+      {/* 后台管理 */}
+      {showAdmin && <AdminPage onClose={() => setShowAdmin(false)} />}
+
+      {/* 全局 Toast 通知 */}
+      <Toast />
     </div>
   );
 }

@@ -15,6 +15,7 @@ type Handlers struct {
 	Chat        *ChatHandler
 	Checkin     *CheckinHandler
 	Achievement *AchievementHandler
+	Admin       *AdminHandler
 }
 
 // NewRouter creates and configures the Gin engine with all routes.
@@ -65,6 +66,23 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 
 		// Achievements
 		api.GET("/users/:user_id/achievements", h.Achievement.Wall)
+
+		// Admin (protected by ADMIN_TOKEN)
+		if h.Admin != nil {
+			admin := api.Group("/admin", h.Admin.AuthMiddleware())
+			{
+				// File upload
+				admin.POST("/cities/:city_id/cover-image", h.Admin.UploadCityCover)
+				admin.POST("/landmarks/:landmark_id/image", h.Admin.UploadLandmarkImage)
+				admin.POST("/characters/:character_id/avatar", h.Admin.UploadCharacterAvatar)
+				admin.POST("/foods/:food_id/image", h.Admin.UploadFoodImage)
+				// URL bind (paste external link)
+				admin.PATCH("/cities/:city_id/cover-image", h.Admin.BindCityCoverURL)
+				admin.PATCH("/landmarks/:landmark_id/image", h.Admin.BindLandmarkImageURL)
+				admin.PATCH("/characters/:character_id/avatar", h.Admin.BindCharacterAvatarURL)
+				admin.PATCH("/foods/:food_id/image", h.Admin.BindFoodImageURL)
+			}
+		}
 	}
 
 	return r

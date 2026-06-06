@@ -16,6 +16,7 @@ type Config struct {
 	Upload UploadConfig
 	CORS   CORSConfig
 	AI     AIConfig
+	Admin  AdminConfig
 	Log    LogConfig
 }
 
@@ -59,6 +60,10 @@ type CORSConfig struct {
 type AIConfig struct {
 	TimeoutSeconds int
 	Timeout        time.Duration
+}
+
+type AdminConfig struct {
+	Token string
 }
 
 type LogConfig struct {
@@ -125,6 +130,9 @@ func Load() *Config {
 		AI: AIConfig{
 			TimeoutSeconds: timeoutSec,
 			Timeout:        time.Duration(timeoutSec) * time.Second,
+		},
+		Admin: AdminConfig{
+			Token: v.GetString("ADMIN_TOKEN"),
 		},
 		Log: LogConfig{
 			Level: v.GetString("LOG_LEVEL"),

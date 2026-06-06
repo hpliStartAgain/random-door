@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import type { CityDetail } from '../api/types';
 import { useMapStore } from '../store/useMapStore';
 import { useViewStore } from '../store/useViewStore';
-import { useUserStore } from '../store/useUserStore';
-import { api } from '../api';
+import { CheckinFlow } from './CheckinFlow';
+import { AchievementUnlock } from './overlays/AchievementUnlock';
+import type { Achievement } from './overlays/AchievementUnlock';
 
 interface Props {
   city: CityDetail | null;
@@ -13,10 +14,9 @@ interface Props {
 export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
   const { resetView } = useMapStore();
   const { openDrawer, setCanvasMode } = useViewStore();
-  const { userId } = useUserStore();
   const [mounted, setMounted] = useState(false);
-  const [checkingIn, setCheckingIn] = useState(false);
-  const [checkinResult, setCheckinResult] = useState<any>(null);
+  const [showCheckin, setShowCheckin] = useState(false);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
 
   useEffect(() => {
     if (city) {
@@ -30,50 +30,13 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
     setMounted(false);
     resetView();
     setCanvasMode('map');
-    setCheckinResult(null);
-    setTimeout(() => {
-      onBack();
-    }, 300);
-  };
-
-  const handleCheckin = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !userId || !city) return;
-    const file = e.target.files[0];
-    
-    setCheckingIn(true);
-    setCheckinResult(null);
-    try {
-      const formData = new FormData();
-      formData.append('selfie_file', file);
-      formData.append('user_id', userId.toString());
-      formData.append('city_id', city.id.toString());
-      // Find the first landmark to use as reference if any
-      const firstLandmarkId = (city as any).landmarks?.[0]?.id || 1; // Default to 1 if no landmarks are passed in the detail (should be passed by API)
-      formData.append('landmark_id', firstLandmarkId.toString());
-      
-      const imgRes = await api.generateImage(formData);
-      const chkRes = await api.createCheckin(userId, city.id, firstLandmarkId, undefined, imgRes.generated_image_url);
-      
-      setCheckinResult({
-        imageUrl: imgRes.generated_image_url,
-        achievements: chkRes.unlocked_achievements
-      });
-    } catch (err) {
-      console.error(err);
-      alert('打卡失败，请重试');
-    } finally {
-      setCheckingIn(false);
-    }
+    setShowCheckin(false);
+    setTimeout(() => { onBack(); }, 300);
   };
 
   if (!city) return null;
 
-  const mediaUrl = (url?: string) => {
-    if (!url) return '';
-    // 绝对 URL 原样返回；相对路径（/uploads、/static）交给当前域名
-    // 开发环境由 Vite 代理转发，生产环境由 Caddy 托管。
-    return url;
-  };
+  const mediaUrl = (url?: string) => url ?? '';
 
   return (
     <div 
@@ -103,6 +66,19 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
         {/* 城市简介 */}
         {city.intro && (
           <p className="text-sm leading-relaxed text-foreground/80">{city.intro}</p>
+        )}
+
+        {/* 方言卡 */}
+        {(city.dialect_sample || city.dialect_explanation) && (
+          <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">方言速记</div>
+            {city.dialect_sample && (
+              <div className="text-2xl font-bold text-primary tracking-wide">{city.dialect_sample}</div>
+            )}
+            {city.dialect_explanation && (
+              <div className="text-sm text-foreground/70 mt-1.5">{city.dialect_explanation}</div>
+            )}
+          </div>
         )}
 
         {/* 标签 */}
@@ -209,51 +185,31 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
               <span className="text-sm font-semibold text-primary">进入 3D 街景</span>
             </div>
 
-            <label className="w-full py-3 bg-accent/15 text-accent font-semibold rounded-xl hover:bg-accent/25 transition-colors flex items-center justify-center cursor-pointer relative overflow-hidden">
-              {checkingIn ? (
-                <span className="animate-pulse">正在穿梭时空生成大片...</span>
-              ) : (
-                <>
-                  <span className="mr-2">📸</span> 生成赛博打卡
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="user"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={handleCheckin}
-                    disabled={checkingIn}
-                  />
-                </>
-              )}
-            </label>
-
-            {checkinResult && (
-              <div className="p-4 rounded-2xl bg-card border border-border shadow-sm animate-in fade-in slide-in-from-bottom-4">
-                <h4 className="font-semibold text-primary mb-2">打卡成功！</h4>
-                <img
-                  src={mediaUrl(checkinResult.imageUrl)}
-                  alt="Cyber Checkin"
-                  className="w-full rounded-xl object-cover mb-4 shadow-sm"
-                />
-                {checkinResult.achievements?.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground font-semibold">🎉 解锁新成就</p>
-                    {checkinResult.achievements.map((ach: any) => (
-                      <div key={ach.code} className="flex items-center gap-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
-                        <span className="text-2xl">🏅</span>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{ach.name}</p>
-                          <p className="text-xs text-muted-foreground">{ach.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <button
+              onClick={() => setShowCheckin(true)}
+              className="w-full py-3 bg-accent/15 text-accent font-semibold rounded-xl hover:bg-accent/25 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>📸</span> 生成赛博打卡
+            </button>
           </div>
         </section>
       </div>
+      {/* CheckinFlow 滑入覆盖层 */}
+      {showCheckin && (
+        <CheckinFlow
+          city={city}
+          onClose={() => setShowCheckin(false)}
+          onAchievementUnlocked={(ach) => setUnlockedAchievements(ach)}
+        />
+      )}
+
+      {/* 成就解锁全屏庆祝 */}
+      {unlockedAchievements.length > 0 && (
+        <AchievementUnlock
+          achievements={unlockedAchievements}
+          onClose={() => setUnlockedAchievements([])}
+        />
+      )}
     </div>
   );
 };

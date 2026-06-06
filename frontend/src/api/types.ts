@@ -141,3 +141,9 @@ export interface AchievementWallResponse {
   locked: LockedAchievement[];
   progress: ProgressItem[];
 }
+
+export interface AdminUploadResponse {
+  cover_image_url?: string;
+  image_url?: string;
+  avatar_url?: string;
+}

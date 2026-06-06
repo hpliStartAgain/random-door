@@ -3,7 +3,7 @@ import type {
   UserResponse, CityListResponse, CityDetail,
   FreeVisitResponse, GameInitResponse, GameRollResponse,
   ChatResponse, GenerateImageResponse, CheckinResponse,
-  AchievementWallResponse,
+  AchievementWallResponse, AdminUploadResponse,
 } from './types';
 
 export const api = {
@@ -42,4 +42,52 @@ export const api = {
 
   getAchievements: (userId: number) =>
     apiClient.get<unknown, AchievementWallResponse>(`/users/${userId}/achievements`),
+
+  adminUploadCityCover: (cityId: number, file: File, token: string) => {
+    const fd = new FormData(); fd.append('file', file);
+    return apiClient.post<unknown, AdminUploadResponse>(`/admin/cities/${cityId}/cover-image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data', 'X-Admin-Token': token },
+    });
+  },
+
+  adminUploadLandmarkImage: (landmarkId: number, file: File, token: string) => {
+    const fd = new FormData(); fd.append('file', file);
+    return apiClient.post<unknown, AdminUploadResponse>(`/admin/landmarks/${landmarkId}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data', 'X-Admin-Token': token },
+    });
+  },
+
+  adminUploadCharacterAvatar: (characterId: number, file: File, token: string) => {
+    const fd = new FormData(); fd.append('file', file);
+    return apiClient.post<unknown, AdminUploadResponse>(`/admin/characters/${characterId}/avatar`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data', 'X-Admin-Token': token },
+    });
+  },
+
+  adminUploadFoodImage: (foodId: number, file: File, token: string) => {
+    const fd = new FormData(); fd.append('file', file);
+    return apiClient.post<unknown, AdminUploadResponse>(`/admin/foods/${foodId}/image`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data', 'X-Admin-Token': token },
+    });
+  },
+
+  adminBindCityCoverURL: (cityId: number, url: string, token: string) =>
+    apiClient.patch<unknown, AdminUploadResponse>(`/admin/cities/${cityId}/cover-image`, { url }, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminBindLandmarkImageURL: (landmarkId: number, url: string, token: string) =>
+    apiClient.patch<unknown, AdminUploadResponse>(`/admin/landmarks/${landmarkId}/image`, { url }, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminBindCharacterAvatarURL: (characterId: number, url: string, token: string) =>
+    apiClient.patch<unknown, AdminUploadResponse>(`/admin/characters/${characterId}/avatar`, { url }, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminBindFoodImageURL: (foodId: number, url: string, token: string) =>
+    apiClient.patch<unknown, AdminUploadResponse>(`/admin/foods/${foodId}/image`, { url }, {
+      headers: { 'X-Admin-Token': token },
+    }),
 };

@@ -104,6 +104,7 @@ func main() {
 		Chat:        api.NewChatHandler(chatSvc),
 		Checkin:     api.NewCheckinHandler(checkinSvc, validator, storage),
 		Achievement: api.NewAchievementHandler(achSvc),
+		Admin:       api.NewAdminHandler(db, storage, validator, cfg.Admin.Token),
 	}
 
 	// 6. Create and start Gin router

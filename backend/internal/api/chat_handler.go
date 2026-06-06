@@ -3,11 +3,14 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	aiPkg "github.com/your-org/city-roam/backend/internal/ai"
 	"github.com/your-org/city-roam/backend/internal/service"
 )
+
+const maxChatMessageLen = 500
 
 type ChatHandler struct {
 	svc *service.ChatService
@@ -28,7 +31,15 @@ type chatReq struct {
 func (h *ChatHandler) Chat(c *gin.Context) {
 	var req chatReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "user_id, city_id, character_id, message are required"))
+		c.JSON(http.StatusBadRequest, errorResp(ErrCodeInvalidParam, "user_id, city_id, character_id, message are required"))
+		return
+	}
+	if strings.TrimSpace(req.Message) == "" {
+		c.JSON(http.StatusBadRequest, errorResp(ErrCodeInvalidParam, "message cannot be empty"))
+		return
+	}
+	if len([]rune(req.Message)) > maxChatMessageLen {
+		c.JSON(http.StatusBadRequest, errorResp(ErrCodeInvalidParam, "message too long (max 500 characters)"))
 		return
 	}
 
@@ -39,10 +50,10 @@ func (h *ChatHandler) Chat(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, aiPkg.ErrAITimeout) {
-			c.JSON(http.StatusGatewayTimeout, errorResp("AI_TIMEOUT", "AI service timeout"))
+			c.JSON(http.StatusGatewayTimeout, errorResp(ErrCodeAITimeout, "AI service timeout"))
 			return
 		}
-		c.JSON(http.StatusBadGateway, errorResp("AI_UPSTREAM_ERROR", "AI service error"))
+		c.JSON(http.StatusBadGateway, errorResp(ErrCodeAIUpstream, "AI service error"))
 		return
 	}
 

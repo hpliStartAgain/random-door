@@ -7,9 +7,11 @@ interface GameState {
   nearestCity: NearestCity | null;
   targetCity: NearestCity | null;
   lastRoll: GameRollResponse | null;
+  fromPoint: { lat: number; lng: number } | null;
   initGame: (userId: number, lat?: number, lng?: number) => Promise<NearestCity>;
   roll: (userId: number, fromCityId: number, lat: number, lng: number) => Promise<GameRollResponse>;
   reset: () => void;
+  setFromPoint: (point: { lat: number; lng: number }) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -17,6 +19,7 @@ export const useGameStore = create<GameState>((set) => ({
   nearestCity: null,
   targetCity: null,
   lastRoll: null,
+  fromPoint: null,
   initGame: async (userId, lat, lng) => {
     const res = await api.gameInit(userId, lat, lng);
     set({ nearestCity: res.nearest_city });
@@ -34,4 +37,5 @@ export const useGameStore = create<GameState>((set) => ({
     }
   },
   reset: () => set({ targetCity: null, lastRoll: null, rolling: false }),
+  setFromPoint: (point) => set({ fromPoint: point }),
 }));

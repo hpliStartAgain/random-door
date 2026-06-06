@@ -1,6 +1,7 @@
-# AI 城市漫游产品（Random Door）
+# 任意门 · AI 城市漫游（Random Door）v1.0
 
-> 黑客松 MVP · 一个城市文化互动探索 Web 应用：自由探索 + 大富翁式随机漫游 + AI 人物对话 + AI 赛博打卡 + 成就收集。
+> **推开门，遇见大美中国。**
+> 一个城市文化互动探索 Web 应用：自由探索 + 大富翁式随机漫游 + AI 跨时空人物对话 + AI 赛博打卡海报 + 成就收集。
 
 ## 架构概览
 ```
@@ -63,6 +64,18 @@ docker compose up -d        # 或 make up
 - 架构：`docs/arch/system-architecture.md`、`directory-structure.md`
 - 产品：`docs/product/prd.md`、`user-flows.md`
 - 验收：`docs/product/acceptance-criteria.md`
+
+## 后台管理
+
+Navbar 右上角齿轮图标 → 输入 `ADMIN_TOKEN`（`.env` 中配置）→ 进入媒体资产管理界面。
+
+功能：为每个城市的**封面图 / 地标图 / 人物头像 / 美食图**批量上传文件或粘贴外链 URL。
+
+## 黄金动线（<10 分钟演示）
+
+见 `docs/product/demo-script.md`：开场品牌页 → 掷骰仪式 → 城市探索 → AI 跨时空对话 → 赛博打卡 → 成就解锁。
+
+每 ~90s 一个 WOW，适合评委演示。
 
 ## MVP 范围与约束
 - 12 个精选城市；匿名用户（无注册登录）；不引入 Redis/MQ；AI 走外部 API；2C2G 单机部署。

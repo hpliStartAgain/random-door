@@ -5,6 +5,8 @@ import "errors"
 var (
 	ErrInvalidParam = errors.New("invalid parameter")
 	ErrNotFound     = errors.New("not found")
+	ErrConflict     = errors.New("conflict")
+	ErrPermission   = errors.New("permission denied")
 )
 
 type clientError struct {
@@ -26,6 +28,14 @@ func invalidParam(message string) error {
 
 func notFound(message string) error {
 	return &clientError{kind: ErrNotFound, message: message}
+}
+
+func conflict(message string) error {
+	return &clientError{kind: ErrConflict, message: message}
+}
+
+func permissionDenied(message string) error {
+	return &clientError{kind: ErrPermission, message: message}
 }
 
 // ClientMessage returns the stable public message for classified service errors.

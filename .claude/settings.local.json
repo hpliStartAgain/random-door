@@ -4,7 +4,17 @@
       "Bash(go build *)",
       "Bash(npm run *)",
       "Bash(npm list *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(go vet *)",
+      "Read(//c/c/Users/19682/Documents/**)",
+      "Read(//c/c/Users/19682/Documents/random-door/**)",
+      "Read(//c/c/Users/19682/Documents/random-door/frontend/src/**)",
+      "Bash(git -C /c/Users/19682/Documents/random-door ls-files)",
+      "Bash(grep -iE '\\(^|/\\)\\\\.env\\($|\\\\.\\)|dist/|tsbuildinfo|vite\\\\.config\\\\.\\(js|ts\\)|\\\\.key|secret')",
+      "Bash(git -C /c/Users/19682/Documents/random-door check-ignore frontend/.env frontend/.env.local .env frontend/dist)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

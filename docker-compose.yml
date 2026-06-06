@@ -19,6 +19,12 @@ services:
       resources:
         limits:
           memory: 320M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # 前端：多阶段构建（node 打包 → caddy 托管）+ 反向代理 /api 到后端。
   # 高德 Key 由 frontend/.env 在构建期被 Vite 自动注入，无需 build args。
@@ -28,7 +34,8 @@ services:
       dockerfile: Dockerfile
     container_name: city_roam_caddy
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     ports:
       - "80:80"
     volumes:
@@ -36,6 +43,12 @@ services:
       - static:/srv/static:ro
       - uploads:/srv/uploads:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   uploads:

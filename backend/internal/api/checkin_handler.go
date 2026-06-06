@@ -48,10 +48,10 @@ func (h *CheckinHandler) GenerateImage(c *gin.Context) {
 	// Validate file
 	if verr := h.validator.Validate(file); verr != nil {
 		if errors.Is(verr, upload.ErrFileTooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, errorResp("FILE_TOO_LARGE", "file exceeds 5MB"))
+			c.JSON(http.StatusRequestEntityTooLarge, errorResp(ErrCodeFileTooLarge, "file exceeds 5MB"))
 			return
 		}
-		c.JSON(http.StatusUnsupportedMediaType, errorResp("UNSUPPORTED_MEDIA", "file type not supported"))
+		c.JSON(http.StatusUnsupportedMediaType, errorResp(ErrCodeUnsupportedMedia, "file type not supported"))
 		return
 	}
 
