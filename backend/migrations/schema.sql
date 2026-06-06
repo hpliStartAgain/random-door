@@ -1,4 +1,4 @@
--- schema.sql — 12 张表建表 DDL（对应 database-detailed-design.md）
+-- schema.sql — 15 张表建表 DDL（对应 database-detailed-design.md）
 -- 枚举用 VARCHAR + 应用层校验；MVP 不建物理外键，*_id 字段建普通索引。
 -- 字符集统一 utf8mb4。
 
@@ -156,4 +156,44 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   KEY idx_cm_user_char_time (user_id, character_id, created_at),
   KEY idx_cm_city (city_id),
   KEY idx_cm_character (character_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS comments (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  target_type VARCHAR(32) NOT NULL,
+  target_id BIGINT NOT NULL,
+  user_id BIGINT,
+  nickname VARCHAR(64) NOT NULL,
+  content VARCHAR(500) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_comments_target_time (target_type, target_id, created_at),
+  KEY idx_comments_user_time (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ai_tasks (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  type VARCHAR(32) NOT NULL,
+  status VARCHAR(32) NOT NULL,
+  input_json JSON NOT NULL,
+  result_url VARCHAR(512),
+  error TEXT,
+  attempts INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  KEY idx_ai_tasks_user_time (user_id, created_at),
+  KEY idx_ai_tasks_status_time (status, updated_at),
+  KEY idx_ai_tasks_type_status (type, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ai_usage_logs (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  usage_type VARCHAR(32) NOT NULL,
+  usage_date DATE NOT NULL,
+  count INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  UNIQUE KEY uk_ai_usage_user_type_date (user_id, usage_type, usage_date),
+  KEY idx_ai_usage_date (usage_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

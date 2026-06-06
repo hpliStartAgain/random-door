@@ -90,8 +90,8 @@ backend/
 
 ### 3.4 chat_service.go
 - Chat(userID, cityID, characterID, message)：
-  1. 读 city/character/landmarks/foods/dialect；character 不存在→NOT_FOUND；
-  2. ai.prompt_builder 组装；
+  1. 读 city/character/可选 dialect_style 与历史消息；character 不存在→NOT_FOUND；
+  2. ai.prompt_builder 组装简短角色扮演 system prompt；
   3. ai.llm_client 调用（超时/重试，失败→AI_UPSTREAM_ERROR/AI_TIMEOUT）；
   4. 落库 user 与 assistant 两条 chat_messages；
   5. 返回 reply。
@@ -136,7 +136,7 @@ backend/
 
 ## 7. internal/ai（详见 ai-orchestration-detailed-design.md）
 - llm_client.go：Chat(ctx, systemPrompt, userMsg) (string,error)，超时+重试。
-- image_client.go：Generate(ctx, selfiePath, refImagePath, prompt) (string,error)。
+- image_client.go：Generate(ctx, selfiePath, refImagePath, prompt) ([]byte,error)，支持 mock 与 DashScope multimodal-generation。
 - prompt_builder.go：BuildChatPrompt(ctx数据)、BuildImagePrompt(city,landmark)。
 
 ## 8. internal/upload
@@ -144,7 +144,7 @@ backend/
 - storage.go：UUID 命名，分目录落 uploads/selfies、uploads/generated；防路径穿越。
 
 ## 8.1 internal/seed
-- seed.go：读取 `SEED_DIR` 下的 cities.json / achievements.json；校验 12 城内容、成就可达性与 AI Prompt 合规提醒；事务内按自然键幂等 upsert。
+- seed.go：读取 `SEED_DIR` 下的 cities.json / achievements.json；校验 12~100 城内容、成就可达性与 AI Prompt 合规提醒；事务内按自然键幂等 upsert。
 
 ## 9. internal/achievement（详见 achievement-engine-detailed-design.md）
 - rules.go：rule_type 解析器（checkin_count/city_tag/tag_count/game_visit_count/dice_direction/dice_distance/first_checkin）。

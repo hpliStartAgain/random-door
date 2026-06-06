@@ -32,6 +32,7 @@
 | 404 | NOT_FOUND | 资源不存在（城市/用户/人物） |
 | 413 | FILE_TOO_LARGE | 上传文件超过 5MB |
 | 415 | UNSUPPORTED_MEDIA | 文件类型不支持 |
+| 429 | AI_QUOTA_EXCEEDED | 匿名用户当日 AI 调用次数超限 |
 | 502 | AI_UPSTREAM_ERROR | 外部 LLM / 生图 API 失败 |
 | 504 | AI_TIMEOUT | 外部 AI 调用超时 |
 | 500 | INTERNAL_ERROR | 服务器内部错误 |
@@ -68,7 +69,7 @@
 
 ## 2. GET /api/cities — 城市列表
 
-**请求**：无参数（MVP 全量 12 城）。
+**请求**：无参数（演示版全量 35 城，seed 校验允许 12~100 城）。
 
 **响应 200**
 ```json
@@ -208,7 +209,105 @@ lat/lng 可选；缺省时用默认位置（北京）。
 { "reply": "若问长安风物，那自然绕不开城墙、大雁塔与兵马俑……" }
 ```
 **错误**：character 不存在 → 404；LLM 失败 → 502 AI_UPSTREAM_ERROR；超时 → 504 AI_TIMEOUT（前端给友好提示，不阻断浏览）。
-**逻辑**：读 city/character/landmarks/foods/dialect → prompt_builder 组装 → llm_client 调用 → 落库 user 与 assistant 两条 chat_messages → 返回 reply。
+**逻辑**：读 city/character/可选 dialect_style 与历史消息 → prompt_builder 组装简短角色扮演 system prompt → llm_client 调用 → 落库 user 与 assistant 两条 chat_messages → 返回 reply。
+
+---
+
+## 7.1 评论与弹幕
+
+游客可对地标、人物、美食发表评论；前端读取同一列表用于评论区与弹幕层。
+
+### GET /api/comments
+
+**Query**
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| target_type | string | 是 | landmark / character / food |
+| target_id | int64 | 是 | 对应资源 id |
+| limit | int | 否 | 1~100，默认 50 |
+
+**响应 200**
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "target_type": "landmark",
+      "target_id": 12,
+      "user_id": 1,
+      "nickname": "北京游客",
+      "content": "这个角度很适合打卡。",
+      "created_at": "2026-05-30T09:39:23+08:00"
+    }
+  ]
+}
+```
+
+### POST /api/comments
+
+**请求**
+```json
+{
+  "target_type": "landmark",
+  "target_id": 12,
+  "user_id": 1,
+  "nickname": "北京游客",
+  "content": "这个角度很适合打卡。"
+}
+```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| target_type | string | 是 | landmark / character / food |
+| target_id | int64 | 是 | 对应资源 id |
+| user_id | int64 | 否 | 匿名用户 id，未初始化时可为空 |
+| nickname | string | 否 | 留空默认“游客” |
+| content | string | 是 | 1~200 字 |
+
+**响应 201**
+```json
+{
+  "id": 2,
+  "target_type": "landmark",
+  "target_id": 12,
+  "user_id": 1,
+  "nickname": "北京游客",
+  "content": "这个角度很适合打卡。",
+  "created_at": "2026-05-30T09:40:23+08:00"
+}
+```
+
+**错误**：target_type 非法、target_id 非正整数、content 为空或超长 → 400；目标资源不存在 → 404。
+
+---
+
+## 7.2 POST /api/guess/caption — 全景截图猜一猜文案
+
+**请求**
+```json
+{
+  "user_id": 1,
+  "city_id": 3,
+  "target_name": "兵马俑",
+  "scene_hint": "全景截图里有城墙、砖色建筑和游客动线"
+}
+```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| user_id | int64 | 否 | 匿名用户 id，便于后续统计 |
+| city_id | int64 | 是 | 当前全景所属城市 |
+| target_name | string | 否 | 当前全景/地标名，缺省用城市名 |
+| scene_hint | string | 否 | 前端截图或用户视角描述，最长 200 字 |
+
+**响应 200**
+```json
+{
+  "weibo": "猜猜我在哪座城？砖色城墙、古都风物和一阵西北风都在画面里。#任意门漫游# #西安#",
+  "moments": "把视角停在这座古都的一角，像是突然闯进一段历史现场。猜猜这是哪里？",
+  "hashtags": ["任意门漫游", "西安"]
+}
+```
+
+**逻辑**：后端读取城市/地标/美食/人物摘要 → 组装简短 prompt → 调 LLM 生成微博与朋友圈文案；LLM 未配置或失败时返回模板兜底，不阻断全景体验。
 
 ---
 
@@ -223,16 +322,53 @@ lat/lng 可选；缺省时用默认位置（北京）。
 | city_id | int64 | 是 | |
 | landmark_id | int64 | 是 | 景点（取参考图） |
 | selfie_file | file | 是 | jpg/jpeg/png/webp，≤5MB |
+| scene_file | file | 否 | 全景 VR 当前视角截图，jpg/jpeg/png/webp，≤5MB；传入时优先作为生图参考图 |
+
+**响应 202**
+```json
+{
+  "task_id": 9001,
+  "status": "queued"
+}
+```
+**错误**：类型不符 → 415；超过 5MB → 413；当日次数超限 → 429。
+**逻辑**：upload.validator 校验 → storage 以 UUID 落 uploads/selfies；如有 scene_file 则落 uploads/scenes → 校验城市/地标 → 写 `ai_tasks(status=queued,type=checkin_image)` → 返回任务。**本接口不阻塞等待外部生图，也不写 checkins**（确认后由接口 9 写）。生图参考图优先使用 scene_file，其次使用 landmark.image_url。
+
+---
+
+## 8.1 GET /api/checkin/image-tasks/{task_id} — 查询生图任务
+
+**路径参数**：task_id（int64）。
 
 **响应 200**
 ```json
 {
-  "status": "success",
-  "generated_image_url": "/uploads/generated/img_123.png"
+  "task_id": 9001,
+  "status": "succeeded",
+  "result_url": "/uploads/generated/img_123.png",
+  "error": null,
+  "attempts": 1,
+  "created_at": "2026-05-30T09:39:23+08:00",
+  "updated_at": "2026-05-30T09:39:33+08:00"
 }
 ```
-**错误**：类型不符 → 415；超过 5MB → 413；生图失败 → 502；超时 → 504。
-**逻辑**：upload.validator 校验 → storage 以 UUID 落 uploads/selfies → 取景点参考图 → image_client 调外部生图 → 落 uploads/generated → 返回 url。**本接口不写 checkins**（确认后由接口 9 写）。
+**status**：queued / running / succeeded / failed / retryable。
+**错误**：任务不存在或不属于该 user_id（请求头 `X-User-Id` 或 query `user_id`）→ 404 NOT_FOUND。
+
+---
+
+## 8.2 POST /api/checkin/image-tasks/{task_id}/retry — 重试生图任务
+
+**请求**
+```json
+{ "user_id": 1 }
+```
+
+**响应 202**
+```json
+{ "task_id": 9001, "status": "queued" }
+```
+**逻辑**：仅 `failed/retryable` 任务可重试；重试会递增后续 attempts，但不重新上传自拍。
 
 ---
 
@@ -288,7 +424,119 @@ lat/lng 可选；缺省时用默认位置（北京）。
 
 ---
 
-## 11. 接口与数据表对照速查
+## 10.1 GET /api/users/{user_id}/assets — 匿名用户资产页
+
+**路径参数**：user_id。
+
+**响应 200**
+```json
+{
+  "visited_cities": [
+    { "id": 3, "name": "西安", "province": "陕西", "visited_at": "2026-05-30T09:39:23+08:00" }
+  ],
+  "posters": [
+    {
+      "checkin_id": 3001,
+      "city_id": 3,
+      "city_name": "西安",
+      "landmark_name": "兵马俑",
+      "generated_image_url": "/uploads/generated/img_123.png",
+      "created_at": "2026-05-30T09:45:00+08:00"
+    }
+  ],
+  "achievement_progress": [
+    { "code": "ancient_capital_tour", "current": 1, "target": 3 }
+  ]
+}
+```
+
+---
+
+## 11. Admin 内容 CMS（ADMIN_TOKEN）
+
+Admin 接口均需 `X-Admin-Token` 或 `Authorization: Bearer <token>`。
+
+### 11.1 GET /api/admin/catalog/coverage
+
+**响应 200**
+```json
+{
+  "total_cities": 35,
+  "complete_cities": 35,
+  "items": [
+    {
+      "city_id": 1,
+      "city_name": "北京",
+      "has_cover_image": true,
+      "tag_count": 2,
+      "landmark_count": 2,
+      "food_count": 2,
+      "character_count": 1,
+      "missing_fields": []
+    }
+  ]
+}
+```
+
+### 11.2 PATCH 内容字段
+
+- `PATCH /api/admin/cities/{id}`
+- `PATCH /api/admin/landmarks/{id}`
+- `PATCH /api/admin/foods/{id}`
+- `PATCH /api/admin/characters/{id}`
+
+请求仅传需要修改的字段。图片字段必须为本地 `/static/...` 或 `/uploads/...` 路径；远程图片需要先通过上传/导入接口落本地。
+
+**示例**
+```json
+{ "intro": "新的城市简介", "tags": ["ancient_capital", "north_china"] }
+```
+
+### 11.3 创建/删除城市下属内容
+
+- `POST /api/admin/cities/{city_id}/landmarks`
+- `POST /api/admin/cities/{city_id}/foods`
+- `POST /api/admin/cities/{city_id}/characters`
+- `DELETE /api/admin/landmarks/{id}`
+- `DELETE /api/admin/foods/{id}`
+- `DELETE /api/admin/characters/{id}`
+
+地标/美食创建请求：
+```json
+{ "name": "故宫", "description": "明清宫城。", "image_url": "/uploads/admin_imports/a.png" }
+```
+
+人物创建请求：
+```json
+{
+  "name": "朱棣",
+  "character_type": "history",
+  "avatar_url": "/uploads/admin_imports/a.png",
+  "persona": "明成祖朱棣的城市导览角色。",
+  "dialect_style": "官话表达为主",
+  "prompt": "你在和用户进行角色扮演的游戏，你扮演的人物是朱棣。不声称真实复活，不编史。"
+}
+```
+`name` 必填；图片字段必须为本地 `/static/...` 或 `/uploads/...` 路径。人物 `character_type` 缺省为 `history`，`persona/prompt` 缺省时由后端生成合规默认值。
+
+创建响应 201 返回新对象；删除响应 200：
+```json
+{ "status": "deleted" }
+```
+
+### 11.4 图片上传/导入
+
+保留现有上传接口：
+- `POST /api/admin/cities/{city_id}/cover-image`
+- `POST /api/admin/landmarks/{landmark_id}/image`
+- `POST /api/admin/foods/{food_id}/image`
+- `POST /api/admin/characters/{character_id}/avatar`
+
+URL 绑定接口不再保存远程 URL。`PATCH .../image` 或 `PATCH .../cover-image` 接收 `{ "url": "https://..." }` 后由后端下载到本地 `/uploads/admin_imports/...`，再保存本地路径。
+
+---
+
+## 12. 接口与数据表对照速查
 | 接口 | 主要读写表 |
 |---|---|
 | /users/anonymous | users |
@@ -297,7 +545,12 @@ lat/lng 可选；缺省时用默认位置（北京）。
 | /visits/free | city_visits |
 | /game/init | cities |
 | /game/roll | dice_rolls, city_visits, cities |
-| /chat | chat_messages, characters, cities, landmarks, foods |
-| /checkin/generate-image | (文件存储，不写库) |
+| /chat | chat_messages, characters, cities |
+| /comments | comments, landmarks, foods, characters |
+| /guess/caption | cities, landmarks, foods, characters |
+| /checkin/generate-image | ai_tasks, ai_usage_logs, uploads/selfies |
+| /checkin/image-tasks/{id} | ai_tasks |
 | /checkin | checkins, user_achievements, achievements |
 | /users/{id}/achievements | achievements, user_achievements |
+| /users/{id}/assets | city_visits, checkins, cities, landmarks, achievements |
+| /admin/* | cities, city_tags, landmarks, foods, characters |

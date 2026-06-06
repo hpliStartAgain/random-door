@@ -14,7 +14,10 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-const ExpectedCityCount = 12
+const (
+	MinCityCount = 12
+	MaxCityCount = 100
+)
 
 var (
 	allowedCharacterTypes = map[string]bool{
@@ -118,8 +121,8 @@ func readJSON(path string, dest any) error {
 
 // ValidateCatalog rejects incomplete or internally inconsistent demo data.
 func ValidateCatalog(catalog Catalog) error {
-	if len(catalog.Cities) != ExpectedCityCount {
-		return fmt.Errorf("expected %d cities, got %d", ExpectedCityCount, len(catalog.Cities))
+	if len(catalog.Cities) < MinCityCount || len(catalog.Cities) > MaxCityCount {
+		return fmt.Errorf("expected %d-%d cities, got %d", MinCityCount, MaxCityCount, len(catalog.Cities))
 	}
 	if len(catalog.Achievements) == 0 {
 		return fmt.Errorf("achievements must not be empty")

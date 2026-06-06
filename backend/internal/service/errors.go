@@ -3,10 +3,11 @@ package service
 import "errors"
 
 var (
-	ErrInvalidParam = errors.New("invalid parameter")
-	ErrNotFound     = errors.New("not found")
-	ErrConflict     = errors.New("conflict")
-	ErrPermission   = errors.New("permission denied")
+	ErrInvalidParam  = errors.New("invalid parameter")
+	ErrNotFound      = errors.New("not found")
+	ErrConflict      = errors.New("conflict")
+	ErrPermission    = errors.New("permission denied")
+	ErrQuotaExceeded = errors.New("quota exceeded")
 )
 
 type clientError struct {
@@ -36,6 +37,10 @@ func conflict(message string) error {
 
 func permissionDenied(message string) error {
 	return &clientError{kind: ErrPermission, message: message}
+}
+
+func quotaExceeded(message string) error {
+	return &clientError{kind: ErrQuotaExceeded, message: message}
 }
 
 // ClientMessage returns the stable public message for classified service errors.

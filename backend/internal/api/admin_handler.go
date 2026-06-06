@@ -7,21 +7,20 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-org/city-roam/backend/internal/model"
+	"github.com/your-org/city-roam/backend/internal/service"
 	"github.com/your-org/city-roam/backend/internal/upload"
-	"gorm.io/gorm"
 )
 
 // AdminHandler handles admin-only media upload operations.
 type AdminHandler struct {
-	db        *gorm.DB
+	svc       *service.AdminService
 	storage   *upload.Storage
 	validator *upload.Validator
 	token     string
 }
 
-func NewAdminHandler(db *gorm.DB, storage *upload.Storage, validator *upload.Validator, token string) *AdminHandler {
-	return &AdminHandler{db: db, storage: storage, validator: validator, token: token}
+func NewAdminHandler(svc *service.AdminService, storage *upload.Storage, validator *upload.Validator, token string) *AdminHandler {
+	return &AdminHandler{svc: svc, storage: storage, validator: validator, token: token}
 }
 
 // AuthMiddleware checks X-Admin-Token or Authorization: Bearer <token>.
@@ -48,6 +47,194 @@ func (h *AdminHandler) AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+// Coverage handles GET /api/admin/catalog/coverage.
+func (h *AdminHandler) Coverage(c *gin.Context) {
+	result, err := h.svc.Coverage(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "internal server error"))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+// UpdateCity handles PATCH /api/admin/cities/:city_id.
+func (h *AdminHandler) UpdateCity(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("city_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid city_id"))
+		return
+	}
+	var req service.UpdateCityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid request body"))
+		return
+	}
+	if err := h.svc.UpdateCity(c.Request.Context(), id, req); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+}
+
+// UpdateLandmark handles PATCH /api/admin/landmarks/:landmark_id.
+func (h *AdminHandler) UpdateLandmark(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("landmark_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid landmark_id"))
+		return
+	}
+	var req service.UpdatePOIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid request body"))
+		return
+	}
+	if err := h.svc.UpdateLandmark(c.Request.Context(), id, req); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+}
+
+// UpdateFood handles PATCH /api/admin/foods/:food_id.
+func (h *AdminHandler) UpdateFood(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("food_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid food_id"))
+		return
+	}
+	var req service.UpdatePOIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid request body"))
+		return
+	}
+	if err := h.svc.UpdateFood(c.Request.Context(), id, req); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+}
+
+// UpdateCharacter handles PATCH /api/admin/characters/:character_id.
+func (h *AdminHandler) UpdateCharacter(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("character_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid character_id"))
+		return
+	}
+	var req service.UpdateCharacterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid request body"))
+		return
+	}
+	if err := h.svc.UpdateCharacter(c.Request.Context(), id, req); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+}
+
+// CreateLandmark handles POST /api/admin/cities/:city_id/landmarks.
+func (h *AdminHandler) CreateLandmark(c *gin.Context) {
+	cityID, err := strconv.ParseInt(c.Param("city_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid city_id"))
+		return
+	}
+	var req service.CreatePOIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "name is required"))
+		return
+	}
+	result, err := h.svc.CreateLandmark(c.Request.Context(), cityID, req)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, result)
+}
+
+// CreateFood handles POST /api/admin/cities/:city_id/foods.
+func (h *AdminHandler) CreateFood(c *gin.Context) {
+	cityID, err := strconv.ParseInt(c.Param("city_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid city_id"))
+		return
+	}
+	var req service.CreatePOIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "name is required"))
+		return
+	}
+	result, err := h.svc.CreateFood(c.Request.Context(), cityID, req)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, result)
+}
+
+// CreateCharacter handles POST /api/admin/cities/:city_id/characters.
+func (h *AdminHandler) CreateCharacter(c *gin.Context) {
+	cityID, err := strconv.ParseInt(c.Param("city_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid city_id"))
+		return
+	}
+	var req service.CreateCharacterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "name is required"))
+		return
+	}
+	result, err := h.svc.CreateCharacter(c.Request.Context(), cityID, req)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, result)
+}
+
+// DeleteLandmark handles DELETE /api/admin/landmarks/:landmark_id.
+func (h *AdminHandler) DeleteLandmark(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("landmark_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid landmark_id"))
+		return
+	}
+	if err := h.svc.DeleteLandmark(c.Request.Context(), id); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
+// DeleteFood handles DELETE /api/admin/foods/:food_id.
+func (h *AdminHandler) DeleteFood(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("food_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid food_id"))
+		return
+	}
+	if err := h.svc.DeleteFood(c.Request.Context(), id); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
+// DeleteCharacter handles DELETE /api/admin/characters/:character_id.
+func (h *AdminHandler) DeleteCharacter(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("character_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid character_id"))
+		return
+	}
+	if err := h.svc.DeleteCharacter(c.Request.Context(), id); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
 // UploadCityCover handles POST /api/admin/cities/:city_id/cover-image
 func (h *AdminHandler) UploadCityCover(c *gin.Context) {
 	cityID, err := strconv.ParseInt(c.Param("city_id"), 10, 64)
@@ -60,9 +247,8 @@ func (h *AdminHandler) UploadCityCover(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", err.Error()))
 		return
 	}
-	if err := h.db.Model(&model.City{}).Where("id = ?", cityID).
-		Update("cover_image_url", urlPath).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	if err := h.svc.UpdateCity(c.Request.Context(), cityID, service.UpdateCityRequest{CoverImageURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"cover_image_url": urlPath})
@@ -80,9 +266,8 @@ func (h *AdminHandler) UploadLandmarkImage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", err.Error()))
 		return
 	}
-	if err := h.db.Model(&model.Landmark{}).Where("id = ?", id).
-		Update("image_url", urlPath).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	if err := h.svc.UpdateLandmark(c.Request.Context(), id, service.UpdatePOIRequest{ImageURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"image_url": urlPath})
@@ -100,9 +285,8 @@ func (h *AdminHandler) UploadCharacterAvatar(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", err.Error()))
 		return
 	}
-	if err := h.db.Model(&model.Character{}).Where("id = ?", id).
-		Update("avatar_url", urlPath).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	if err := h.svc.UpdateCharacter(c.Request.Context(), id, service.UpdateCharacterRequest{AvatarURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"avatar_url": urlPath})
@@ -120,9 +304,8 @@ func (h *AdminHandler) UploadFoodImage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", err.Error()))
 		return
 	}
-	if err := h.db.Model(&model.Food{}).Where("id = ?", id).
-		Update("image_url", urlPath).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	if err := h.svc.UpdateFood(c.Request.Context(), id, service.UpdatePOIRequest{ImageURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"image_url": urlPath})
@@ -157,12 +340,16 @@ func (h *AdminHandler) BindCityCoverURL(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "url is required"))
 		return
 	}
-	if err := h.db.Model(&model.City{}).Where("id = ?", cityID).
-		Update("cover_image_url", req.URL).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	urlPath, err := h.svc.ImportImageURL(c.Request.Context(), req.URL)
+	if err != nil {
+		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"cover_image_url": req.URL})
+	if err := h.svc.UpdateCity(c.Request.Context(), cityID, service.UpdateCityRequest{CoverImageURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"cover_image_url": urlPath})
 }
 
 // BindLandmarkImageURL handles PATCH /api/admin/landmarks/:landmark_id/image
@@ -177,12 +364,16 @@ func (h *AdminHandler) BindLandmarkImageURL(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "url is required"))
 		return
 	}
-	if err := h.db.Model(&model.Landmark{}).Where("id = ?", id).
-		Update("image_url", req.URL).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	urlPath, err := h.svc.ImportImageURL(c.Request.Context(), req.URL)
+	if err != nil {
+		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"image_url": req.URL})
+	if err := h.svc.UpdateLandmark(c.Request.Context(), id, service.UpdatePOIRequest{ImageURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"image_url": urlPath})
 }
 
 // BindCharacterAvatarURL handles PATCH /api/admin/characters/:character_id/avatar
@@ -197,12 +388,16 @@ func (h *AdminHandler) BindCharacterAvatarURL(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "url is required"))
 		return
 	}
-	if err := h.db.Model(&model.Character{}).Where("id = ?", id).
-		Update("avatar_url", req.URL).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	urlPath, err := h.svc.ImportImageURL(c.Request.Context(), req.URL)
+	if err != nil {
+		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"avatar_url": req.URL})
+	if err := h.svc.UpdateCharacter(c.Request.Context(), id, service.UpdateCharacterRequest{AvatarURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"avatar_url": urlPath})
 }
 
 // BindFoodImageURL handles PATCH /api/admin/foods/:food_id/image
@@ -217,10 +412,14 @@ func (h *AdminHandler) BindFoodImageURL(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "url is required"))
 		return
 	}
-	if err := h.db.Model(&model.Food{}).Where("id = ?", id).
-		Update("image_url", req.URL).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", err.Error()))
+	urlPath, err := h.svc.ImportImageURL(c.Request.Context(), req.URL)
+	if err != nil {
+		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"image_url": req.URL})
+	if err := h.svc.UpdateFood(c.Request.Context(), id, service.UpdatePOIRequest{ImageURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"image_url": urlPath})
 }

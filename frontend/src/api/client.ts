@@ -7,9 +7,9 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const anonymousId = useUserStore.getState().anonymousId;
-  if (anonymousId) {
-    config.headers['X-User-Id'] = anonymousId;
+  const userId = useUserStore.getState().userId;
+  if (userId) {
+    config.headers['X-User-Id'] = String(userId);
   }
   return config;
 });

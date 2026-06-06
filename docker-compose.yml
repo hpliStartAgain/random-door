@@ -1,19 +1,50 @@
 # docker-compose.yml — 2C2G 单机一键部署
-# 数据库使用外部 MySQL 实例，通过 .env 中的 DB_HOST/DB_PORT 配置连接。
+# 默认启动内置 MySQL 8；如需外部 MySQL，可将 app 的 DB_HOST/DB_PORT 指向外部实例。
 version: "3.8"
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: city_roam_mysql
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-city_roam}
+      MYSQL_USER: ${DB_USER:-city_roam}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-city_roam_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=50
+      - --performance-schema=OFF
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 900M
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   app:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: city_roam_app
     env_file: .env
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
       - uploads:/app/uploads
-      - static:/app/static
+      - ./backend/static:/app/static:ro
     restart: unless-stopped
     deploy:
       resources:
@@ -27,11 +58,15 @@ services:
       start_period: 10s
 
   # 前端：多阶段构建（node 打包 → caddy 托管）+ 反向代理 /api 到后端。
-  # 高德 Key 由 frontend/.env 在构建期被 Vite 自动注入，无需 build args。
+  # 高德 Key 属前端公开 Key，由根 .env 通过 build args 注入 Vite 构建。
   caddy:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY:-}
+        VITE_AMAP_SECURITY_CODE: ${VITE_AMAP_SECURITY_CODE:-}
+        VITE_API_BASE: ${VITE_API_BASE:-/api}
     container_name: city_roam_caddy
     depends_on:
       app:
@@ -40,7 +75,7 @@ services:
       - "80:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - static:/srv/static:ro
+      - ./backend/static:/srv/static:ro
       - uploads:/srv/uploads:ro
     restart: unless-stopped
     healthcheck:
@@ -51,5 +86,5 @@ services:
       start_period: 15s
 
 volumes:
+  mysql_data:
   uploads:
-  static:

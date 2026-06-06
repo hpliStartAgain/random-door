@@ -63,6 +63,9 @@ func main() {
 		&model.Achievement{},
 		&model.UserAchievement{},
 		&model.ChatMessage{},
+		&model.Comment{},
+		&model.AITask{},
+		&model.AIUsageLog{},
 	); err != nil {
 		log.Fatalf("auto migrate failed: %v", err)
 	}
@@ -82,9 +85,13 @@ func main() {
 	chatRepo := repository.NewChatRepo(db)
 	checkinRepo := repository.NewCheckinRepo(db)
 	achRepo := repository.NewAchievementRepo(db)
+	aiTaskRepo := repository.NewAITaskRepo(db)
+	aiUsageRepo := repository.NewAIUsageRepo(db)
+	commentRepo := repository.NewCommentRepo(db)
+	adminRepo := repository.NewAdminRepo(db)
 
 	llmClient := ai.NewLLMClient(cfg.LLM.APIBase, cfg.LLM.APIKey, cfg.LLM.Model, cfg.AI.Timeout)
-	imageClient := ai.NewImageClient(cfg.Image.APIBase, cfg.Image.APIKey, cfg.AI.Timeout)
+	imageClient := ai.NewImageClient(cfg.Image.APIBase, cfg.Image.APIKey, cfg.Image.Model, cfg.Server.StaticDir, cfg.Server.UploadDir, cfg.AI.Timeout)
 	validator := upload.NewValidator(cfg.Upload.MaxSizeMB, cfg.Upload.AllowedTypes)
 	storage := upload.NewStorage(cfg.Server.UploadDir)
 
@@ -92,19 +99,30 @@ func main() {
 	visitSvc := service.NewVisitService(userRepo, cityRepo, visitRepo)
 	gameStore := repository.NewGameStore(db, diceRepo, visitRepo)
 	gameSvc := service.NewGameService(userRepo, cityRepo, visitRepo, gameStore)
-	chatSvc := service.NewChatService(cityRepo, chatRepo, llmClient)
+	chatSvc := service.NewChatService(cityRepo, chatRepo, llmClient).
+		WithUsageLimit(aiUsageRepo, cfg.AI.ChatDailyLimit)
+	commentSvc := service.NewCommentService(commentRepo, cityRepo)
+	guessSvc := service.NewGuessService(cityRepo, llmClient)
 	achSvc := service.NewAchievementService(db, achRepo)
 	checkinStore := repository.NewCheckinStore(db, checkinRepo)
-	checkinSvc := service.NewCheckinService(userRepo, cityRepo, checkinStore, imageClient, storage)
+	checkinSvc := service.NewCheckinService(userRepo, cityRepo, checkinStore, imageClient, storage).
+		WithImageTasks(aiTaskRepo, aiUsageRepo, cfg.AI.ImageDailyLimit, cfg.AI.MaxTaskAttempts).
+		WithVisitRepo(visitRepo)
+	checkinSvc.StartImageWorker(context.Background(), time.Duration(cfg.AI.WorkerIntervalSeconds)*time.Second, cfg.AI.WorkerConcurrency)
+	adminSvc := service.NewAdminService(adminRepo, storage)
+	assetSvc := service.NewAssetService(userRepo, cityRepo, visitRepo, checkinRepo, achSvc)
 
 	handlers := api.Handlers{
 		City:        api.NewCityHandler(citySvc),
 		Visit:       api.NewVisitHandler(visitSvc),
 		Game:        api.NewGameHandler(gameSvc),
 		Chat:        api.NewChatHandler(chatSvc),
+		Comment:     api.NewCommentHandler(commentSvc),
+		Guess:       api.NewGuessHandler(guessSvc),
 		Checkin:     api.NewCheckinHandler(checkinSvc, validator, storage),
 		Achievement: api.NewAchievementHandler(achSvc),
-		Admin:       api.NewAdminHandler(db, storage, validator, cfg.Admin.Token),
+		Asset:       api.NewAssetHandler(assetSvc),
+		Admin:       api.NewAdminHandler(adminSvc, storage, validator, cfg.Admin.Token),
 	}
 
 	// 6. Create and start Gin router

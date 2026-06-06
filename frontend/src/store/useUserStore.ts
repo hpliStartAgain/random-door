@@ -7,6 +7,7 @@ interface UserState {
   anonymousId: string | null;
   currentCityId: number | null;
   initUser: () => Promise<void>;
+  setCurrentCityId: (cityId: number | null) => void;
 }
 
 /** 兼容 HTTP 非安全上下文的 UUID v4 生成器（回退到 Math.random） */
@@ -28,6 +29,7 @@ export const useUserStore = create<UserState>()(
       userId: null,
       anonymousId: null,
       currentCityId: null,
+      setCurrentCityId: (cityId) => set({ currentCityId: cityId }),
       initUser: async () => {
         let anonId = get().anonymousId;
         if (!anonId) {
@@ -36,7 +38,7 @@ export const useUserStore = create<UserState>()(
         }
         try {
           const res = await api.createAnonymousUser(anonId);
-          set({ userId: res.user_id });
+          set({ userId: res.user_id, currentCityId: res.current_city_id ?? get().currentCityId });
         } catch (error) {
           console.error('Failed to init user:', error);
         }

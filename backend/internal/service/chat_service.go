@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/your-org/city-roam/backend/internal/ai"
 	"github.com/your-org/city-roam/backend/internal/model"
@@ -14,8 +15,6 @@ import (
 type chatCityRepo interface {
 	FindByID(ctx context.Context, id int64) (*model.City, error)
 	FindCharacterByID(ctx context.Context, id int64) (*model.Character, error)
-	ListLandmarks(ctx context.Context, cityID int64) ([]model.Landmark, error)
-	ListFoods(ctx context.Context, cityID int64) ([]model.Food, error)
 }
 
 type chatMessageRepo interface {
@@ -28,14 +27,26 @@ type llmCaller interface {
 	ChatWithHistory(ctx context.Context, systemPrompt string, history []ai.ChatMessage, userMessage string) (string, error)
 }
 
+type aiUsageLimiter interface {
+	IncrementIfBelow(ctx context.Context, userID int64, usageType string, usageDate time.Time, limit int) (int, bool, error)
+}
+
 type ChatService struct {
-	cityRepo chatCityRepo
-	chatRepo chatMessageRepo
-	llm      llmCaller
+	cityRepo       chatCityRepo
+	chatRepo       chatMessageRepo
+	llm            llmCaller
+	usageLimiter   aiUsageLimiter
+	chatDailyLimit int
 }
 
 func NewChatService(cityRepo chatCityRepo, chatRepo chatMessageRepo, llm llmCaller) *ChatService {
 	return &ChatService{cityRepo: cityRepo, chatRepo: chatRepo, llm: llm}
+}
+
+func (s *ChatService) WithUsageLimit(limiter aiUsageLimiter, dailyLimit int) *ChatService {
+	s.usageLimiter = limiter
+	s.chatDailyLimit = dailyLimit
+	return s
 }
 
 const maxMessageLen = 500
@@ -44,6 +55,15 @@ const maxMessageLen = 500
 func (s *ChatService) Chat(ctx context.Context, userID, cityID, characterID int64, message string) (string, error) {
 	if len([]rune(message)) > maxMessageLen {
 		return "", invalidParam("message too long (max 500 characters)")
+	}
+	if s.usageLimiter != nil && s.chatDailyLimit > 0 {
+		_, allowed, err := s.usageLimiter.IncrementIfBelow(ctx, userID, "chat", time.Now(), s.chatDailyLimit)
+		if err != nil {
+			return "", fmt.Errorf("increment chat usage: %w", err)
+		}
+		if !allowed {
+			return "", quotaExceeded("daily chat quota exceeded")
+		}
 	}
 	// 1. Load city and character
 	city, err := s.cityRepo.FindByID(ctx, cityID)
@@ -61,21 +81,11 @@ func (s *ChatService) Chat(ctx context.Context, userID, cityID, characterID int6
 		}
 		return "", fmt.Errorf("find character: %w", err)
 	}
-
-	// 2. Load landmarks and foods for prompt context
-	landmarks, _ := s.cityRepo.ListLandmarks(ctx, cityID)
-	lmNames := make([]string, 0, len(landmarks))
-	for _, l := range landmarks {
-		lmNames = append(lmNames, l.Name)
+	if ch.CityID != cityID {
+		return "", notFound("character not found")
 	}
 
-	foods, _ := s.cityRepo.ListFoods(ctx, cityID)
-	foodNames := make([]string, 0, len(foods))
-	for _, f := range foods {
-		foodNames = append(foodNames, f.Name)
-	}
-
-	// 3. Build system prompt
+	// 2. Build system prompt
 	dialectStyle := ""
 	if ch.DialectStyle != nil {
 		dialectStyle = *ch.DialectStyle
@@ -83,13 +93,10 @@ func (s *ChatService) Chat(ctx context.Context, userID, cityID, characterID int6
 	systemPrompt := ai.BuildChatPrompt(ai.ChatContext{
 		CityName:      city.Name,
 		CharacterName: ch.Name,
-		Persona:       ch.Persona,
-		Landmarks:     lmNames,
-		Foods:         foodNames,
 		DialectStyle:  dialectStyle,
 	})
 
-	// 4. Load history
+	// 3. Load history
 	histMsgs, err := s.chatRepo.ListByUserCharacter(ctx, userID, characterID, 10)
 	if err != nil {
 		slog.Warn("failed to load chat history", "error", err)
@@ -104,7 +111,7 @@ func (s *ChatService) Chat(ctx context.Context, userID, cityID, characterID int6
 		})
 	}
 
-	// 5. Call LLM
+	// 4. Call LLM
 	reply, err := s.llm.ChatWithHistory(ctx, systemPrompt, aiHistory, message)
 	if err != nil {
 		slog.Error("llm chat failed", "error", err, "user_id", userID, "character_id", characterID)
@@ -114,7 +121,7 @@ func (s *ChatService) Chat(ctx context.Context, userID, cityID, characterID int6
 		return "", fmt.Errorf("%w: %v", ai.ErrAIUpstream, err)
 	}
 
-	// 6. Save user and assistant messages
+	// 5. Save user and assistant messages
 	userMsg := &model.ChatMessage{
 		UserID: userID, CityID: cityID, CharacterID: characterID,
 		Role: "user", Content: message,

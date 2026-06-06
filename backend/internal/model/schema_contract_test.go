@@ -9,10 +9,10 @@ import (
 	"testing"
 )
 
-func TestSchemaDefinesTwelveTablesAndRequiredIndexes(t *testing.T) {
+func TestSchemaDefinesTablesAndRequiredIndexes(t *testing.T) {
 	schema := readSchema(t)
-	if got := strings.Count(schema, "CREATE TABLE IF NOT EXISTS "); got != 12 {
-		t.Fatalf("table count = %d, want 12", got)
+	if got := strings.Count(schema, "CREATE TABLE IF NOT EXISTS "); got != 15 {
+		t.Fatalf("table count = %d, want 15", got)
 	}
 
 	required := []string{
@@ -42,6 +42,13 @@ func TestSchemaDefinesTwelveTablesAndRequiredIndexes(t *testing.T) {
 		"KEY idx_cm_user_char_time (user_id, character_id, created_at)",
 		"KEY idx_cm_city (city_id)",
 		"KEY idx_cm_character (character_id)",
+		"KEY idx_comments_target_time (target_type, target_id, created_at)",
+		"KEY idx_comments_user_time (user_id, created_at)",
+		"KEY idx_ai_tasks_user_time (user_id, created_at)",
+		"KEY idx_ai_tasks_status_time (status, updated_at)",
+		"KEY idx_ai_tasks_type_status (type, status)",
+		"UNIQUE KEY uk_ai_usage_user_type_date (user_id, usage_type, usage_date)",
+		"KEY idx_ai_usage_date (usage_date)",
 	}
 	for _, item := range required {
 		if !strings.Contains(schema, item) {
@@ -64,9 +71,12 @@ func TestModelTableNames(t *testing.T) {
 		(Achievement{}).TableName():     "achievements",
 		(UserAchievement{}).TableName(): "user_achievements",
 		(ChatMessage{}).TableName():     "chat_messages",
+		(Comment{}).TableName():         "comments",
+		(AITask{}).TableName():          "ai_tasks",
+		(AIUsageLog{}).TableName():      "ai_usage_logs",
 	}
-	if len(tables) != 12 {
-		t.Fatalf("unique model table names = %d, want 12", len(tables))
+	if len(tables) != 15 {
+		t.Fatalf("unique model table names = %d, want 15", len(tables))
 	}
 	for got, want := range tables {
 		if got != want {
@@ -102,6 +112,18 @@ func TestModelIndexTagsMatchSchemaContract(t *testing.T) {
 		{UserAchievement{}, "AchievementID", []string{"index:idx_ua_achievement"}},
 		{ChatMessage{}, "CityID", []string{"index:idx_cm_city"}},
 		{ChatMessage{}, "CharacterID", []string{"index:idx_cm_character"}},
+		{Comment{}, "TargetType", []string{"index:idx_comments_target_time,priority:1"}},
+		{Comment{}, "TargetID", []string{"index:idx_comments_target_time,priority:2"}},
+		{Comment{}, "UserID", []string{"index:idx_comments_user_time,priority:1"}},
+		{Comment{}, "CreatedAt", []string{"index:idx_comments_target_time,priority:3", "index:idx_comments_user_time,priority:2"}},
+		{AITask{}, "UserID", []string{"index:idx_ai_tasks_user_time,priority:1"}},
+		{AITask{}, "Status", []string{"index:idx_ai_tasks_status_time,priority:1", "index:idx_ai_tasks_type_status,priority:2"}},
+		{AITask{}, "Type", []string{"index:idx_ai_tasks_type_status,priority:1"}},
+		{AITask{}, "CreatedAt", []string{"index:idx_ai_tasks_user_time,priority:2"}},
+		{AITask{}, "UpdatedAt", []string{"index:idx_ai_tasks_status_time,priority:2"}},
+		{AIUsageLog{}, "UserID", []string{"uniqueIndex:uk_ai_usage_user_type_date,priority:1"}},
+		{AIUsageLog{}, "UsageType", []string{"uniqueIndex:uk_ai_usage_user_type_date,priority:2"}},
+		{AIUsageLog{}, "UsageDate", []string{"uniqueIndex:uk_ai_usage_user_type_date,priority:3", "index:idx_ai_usage_date"}},
 	}
 
 	for _, tt := range tests {

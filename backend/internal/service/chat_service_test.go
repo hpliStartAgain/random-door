@@ -134,6 +134,20 @@ func TestChatService_CharacterNotFound(t *testing.T) {
 	}
 }
 
+func TestChatService_CharacterMustBelongToCity(t *testing.T) {
+	repo := &fakeChatCityRepo{
+		findByID: func(_ context.Context, _ int64) (*model.City, error) { return testCity, nil },
+		findCharacterByID: func(_ context.Context, _ int64) (*model.Character, error) {
+			return &model.Character{ID: 8, CityID: 99, Name: "李白", Persona: "诗仙"}, nil
+		},
+	}
+	svc := newTestChatService(repo, &fakeChatMsgRepo{}, &fakeLLM{})
+	_, err := svc.Chat(context.Background(), 1, 1, 8, "你好")
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
 func TestChatService_LLMTimeout(t *testing.T) {
 	svc := newTestChatService(okCityRepo(), &fakeChatMsgRepo{}, &fakeLLM{
 		chat: func(_ context.Context, _, _ string) (string, error) { return "", aiPkg.ErrAITimeout },

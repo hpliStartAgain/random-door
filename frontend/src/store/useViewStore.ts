@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { City } from './useCityStore';
 
 interface DrawerState {
   isOpen: boolean;
@@ -7,19 +6,30 @@ interface DrawerState {
   data: any | null;
 }
 
-export type ViewName = 'HOME' | 'EXPLORE' | 'ACHIEVEMENT' | 'CITY_DETAIL' | 'FREE_EXPLORE' | 'GAME_DICE';
+export interface StreetTarget {
+  id: number;
+  city_id?: number;
+  name: string;
+  province?: string;
+  lat?: number;
+  lng?: number;
+  cover_image_url?: string;
+  tags?: string[];
+}
+
+export type ViewName = 'HOME' | 'EXPLORE' | 'ACHIEVEMENT' | 'ASSETS' | 'CITY_DETAIL' | 'FREE_EXPLORE' | 'GAME_DICE';
 export type RollPhase = 'idle' | 'rolling' | 'revealing' | 'flying' | 'landed';
 
 interface ViewState {
   currentView: ViewName;
   activeCityId: number | null;
   canvasMode: 'map' | 'street';
-  streetTarget: City | null;
+  streetTarget: StreetTarget | null;
   drawer: DrawerState;
   hasEntered: boolean;
   rollPhase: RollPhase;
   setView: (view: ViewName, cityId?: number) => void;
-  setCanvasMode: (mode: 'map' | 'street', target?: City) => void;
+  setCanvasMode: (mode: 'map' | 'street', target?: StreetTarget) => void;
   openDrawer: (type: 'chat' | 'gallery', data: any) => void;
   closeDrawer: () => void;
   enter: () => void;

@@ -9,6 +9,8 @@ interface CityState {
   cityCache: Record<number, CityDetail>;
   loadCities: () => Promise<void>;
   loadCity: (id: number) => Promise<CityDetail>;
+  reloadCity: (id: number) => Promise<CityDetail>;
+  invalidateCity: (id?: number) => void;
 }
 
 export const useCityStore = create<CityState>((set, get) => ({
@@ -25,4 +27,15 @@ export const useCityStore = create<CityState>((set, get) => ({
     set((state) => ({ cityCache: { ...state.cityCache, [id]: city } }));
     return city;
   },
+  reloadCity: async (id: number) => {
+    const city = await api.getCityDetail(id);
+    set((state) => ({ cityCache: { ...state.cityCache, [id]: city } }));
+    return city;
+  },
+  invalidateCity: (id?: number) => set((state) => {
+    if (id === undefined) return { cityCache: {} };
+    const next = { ...state.cityCache };
+    delete next[id];
+    return { cityCache: next };
+  }),
 }));

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { CityDetail, Landmark } from '../api/types';
+import type { CityDetail, ImageTaskStatusValue, Landmark } from '../api/types';
 import { api } from '../api';
 import { useUserStore } from '../store/useUserStore';
 import { CheckinPoster } from './CheckinPoster';
@@ -8,6 +8,8 @@ import type { Achievement } from './overlays/AchievementUnlock';
 interface Props {
   city: CityDetail;
   visitId?: number;
+  initialLandmarkId?: number;
+  sceneFile?: File | null;
   onClose: () => void;
   onAchievementUnlocked: (achievements: Achievement[]) => void;
 }
@@ -15,8 +17,16 @@ interface Props {
 type Step = 'landmark' | 'upload' | 'confirm';
 
 const STEPS: Step[] = ['landmark', 'upload', 'confirm'];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
-export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchievementUnlocked }) => {
+function validateImage(file: File): string | null {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) return '仅支持 JPG、PNG、WEBP 图片';
+  if (file.size > MAX_IMAGE_SIZE_BYTES) return '图片不能超过 5MB';
+  return null;
+}
+
+export const CheckinFlow: React.FC<Props> = ({ city, visitId, initialLandmarkId, sceneFile, onClose, onAchievementUnlocked }) => {
   const { userId } = useUserStore();
   const [step, setStep] = useState<Step>('landmark');
   const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(null);
@@ -25,6 +35,8 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<number | null>(null);
+  const [taskStatus, setTaskStatus] = useState<ImageTaskStatusValue | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,6 +45,20 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
   const landmarks: Landmark[] = city.landmarks?.length > 0
     ? city.landmarks
     : [{ id: 1, name: city.name, image_url: city.cover_image_url, description: city.intro }];
+
+  useEffect(() => {
+    if (!initialLandmarkId) return;
+    const match = landmarks.find((lm) => lm.id === initialLandmarkId);
+    if (!match) return;
+    setSelectedLandmark(match);
+    setStep('upload');
+  }, [city.id, initialLandmarkId]);
+
+  useEffect(() => {
+    return () => {
+      if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+    };
+  }, [selfiePreview]);
 
   useEffect(() => {
     if (!generating) {
@@ -49,31 +75,84 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validationError = validateImage(file);
+    if (validationError) {
+      setError(validationError);
+      e.target.value = '';
+      return;
+    }
+    if (selfiePreview) URL.revokeObjectURL(selfiePreview);
     setSelfieFile(file);
     setSelfiePreview(URL.createObjectURL(file));
     setError(null);
   };
 
+  const waitForTask = async (id: number) => {
+    if (!userId) return;
+    for (let i = 0; i < 90; i += 1) {
+      const task = await api.getImageTask(id, userId);
+      setTaskStatus(task.status);
+      if (task.status === 'succeeded' && task.result_url) {
+        setProgress(100);
+        setGeneratedUrl(task.result_url);
+        setGenerating(false);
+        setStep('confirm');
+        return;
+      }
+      if (task.status === 'failed') {
+        throw new Error(task.error || 'AI 生成失败，请重试');
+      }
+      if (task.status === 'retryable') {
+        throw new Error(task.error || 'AI 生成暂时失败，可重试');
+      }
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+    throw new Error('AI 生成仍在排队，请稍后重试');
+  };
+
   const handleGenerate = async () => {
     if (!selfieFile || !userId || !selectedLandmark) return;
+    if (sceneFile) {
+      const sceneValidationError = validateImage(sceneFile);
+      if (sceneValidationError) {
+        setError(`全景参考图${sceneValidationError}`);
+        return;
+      }
+    }
     setGenerating(true);
     setError(null);
+    setTaskId(null);
+    setTaskStatus(null);
     try {
       const formData = new FormData();
       formData.append('selfie_file', selfieFile);
       formData.append('user_id', userId.toString());
       formData.append('city_id', city.id.toString());
       formData.append('landmark_id', selectedLandmark.id.toString());
+      if (sceneFile) {
+        formData.append('scene_file', sceneFile);
+      }
       const res = await api.generateImage(formData);
-      setProgress(100);
-      setTimeout(() => {
-        setGeneratedUrl(res.generated_image_url);
-        setGenerating(false);
-        setStep('confirm');
-      }, 400);
-    } catch {
+      setTaskId(res.task_id);
+      setTaskStatus(res.status as ImageTaskStatusValue);
+      await waitForTask(res.task_id);
+    } catch (e: any) {
       setGenerating(false);
-      setError('AI 生成失败，请重试');
+      setError(e?.message || 'AI 生成失败，请重试');
+    }
+  };
+
+  const handleRetryTask = async () => {
+    if (!taskId || !userId) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await api.retryImageTask(taskId, userId);
+      setTaskStatus(res.status as ImageTaskStatusValue);
+      await waitForTask(res.task_id);
+    } catch (e: any) {
+      setGenerating(false);
+      setError(e?.message || 'AI 生成失败，请重试');
     }
   };
 
@@ -143,6 +222,11 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
               <span>📍</span>
               <span>地标：<span className="font-semibold text-foreground">{selectedLandmark.name}</span></span>
             </div>
+            {sceneFile && (
+              <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2 text-xs text-primary">
+                已捕捉当前全景视角作为合成参考
+              </div>
+            )}
             <div
               onClick={() => !generating && fileInputRef.current?.click()}
               className={`relative w-full aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden ${selfiePreview ? 'border-primary/40' : 'border-border hover:border-primary/40 bg-secondary/30'}`}
@@ -156,12 +240,14 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
                 </>
               )}
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="hidden" onChange={handleFileChange} />
 
             {generating && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="animate-pulse">AI 正在穿梭时空合成大片…</span>
+                  <span className="animate-pulse">
+                    {taskStatus === 'queued' ? '任务已排队，等待生成…' : 'AI 正在合成赛博大片…'}
+                  </span>
                   <span>{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
@@ -170,13 +256,26 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
               </div>
             )}
 
-            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+            {error && (
+              <div className="space-y-2">
+                <p className="text-sm text-red-500 text-center">{error}</p>
+                {taskId && (
+                  <button
+                    onClick={handleRetryTask}
+                    disabled={generating}
+                    className="w-full py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-secondary transition-colors disabled:opacity-50"
+                  >
+                    重试任务
+                  </button>
+                )}
+              </div>
+            )}
 
             <button
               onClick={handleGenerate}
               disabled={!selfieFile || generating}
-              className="w-full py-3.5 rounded-2xl font-bold text-sm text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={selfieFile && !generating ? { background: 'linear-gradient(135deg,#6366f1,#818cf8)', boxShadow: '0 0 20px rgba(99,102,241,0.3)' } : {}}
+              className="w-full py-3.5 rounded-2xl font-bold text-sm bg-muted text-muted-foreground transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              style={selfieFile && !generating ? { background: 'linear-gradient(135deg,hsl(var(--primary)),hsl(var(--accent)))', boxShadow: '0 12px 26px rgba(194,159,96,0.22)', color: 'hsl(var(--primary-foreground))' } : {}}
             >
               {generating ? '生成中…' : '✨ 生成赛博大片'}
             </button>
@@ -198,8 +297,8 @@ export const CheckinFlow: React.FC<Props> = ({ city, visitId, onClose, onAchieve
               <button
                 onClick={handleConfirm}
                 disabled={confirming}
-                className="flex-1 py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 transition-all"
-                style={{ background: 'linear-gradient(135deg,#6366f1,#818cf8)', boxShadow: '0 0 20px rgba(99,102,241,0.3)' }}
+                className="flex-1 py-3 rounded-xl text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all"
+                style={{ background: 'linear-gradient(135deg,hsl(var(--primary)),hsl(var(--accent)))', boxShadow: '0 12px 26px rgba(194,159,96,0.22)' }}
               >
                 {confirming ? '打卡中…' : '✓ 确认打卡'}
               </button>

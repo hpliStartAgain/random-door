@@ -5,6 +5,33 @@ import { useCityStore } from '../store/useCityStore';
 import { useGameStore } from '../store/useGameStore';
 import { useViewStore } from '../store/useViewStore';
 
+const DEFAULT_USER_POSITION = { lat: 39.9042, lng: 116.4074 };
+
+const FOX_SVG = `
+  <svg viewBox="0 0 96 96" style="position:relative;width:34px;height:34px;filter:drop-shadow(0 8px 12px rgba(43,58,54,0.28));">
+    <path d="M18 28 L33 15 L37 35 Z" fill="#D47A3C"></path>
+    <path d="M78 28 L63 15 L59 35 Z" fill="#D47A3C"></path>
+    <path d="M24 31 C28 15 68 15 72 31 C84 48 75 78 48 82 C21 78 12 48 24 31Z" fill="#E48743"></path>
+    <path d="M30 32 C37 43 42 55 48 80 C54 55 59 43 66 32 C60 68 36 68 30 32Z" fill="#FFF2D7" opacity="0.96"></path>
+    <circle cx="36" cy="47" r="3.8" fill="#22302C"></circle>
+    <circle cx="60" cy="47" r="3.8" fill="#22302C"></circle>
+    <path d="M45 58 Q48 61 51 58" fill="none" stroke="#22302C" stroke-width="2.4" stroke-linecap="round"></path>
+    <path d="M48 54 L43 59 L53 59 Z" fill="#22302C"></path>
+  </svg>
+`;
+
+function foxMarkerContent(label?: string, pulse = false): HTMLDivElement {
+  const markerDiv = document.createElement('div');
+  markerDiv.style.cssText = 'position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;';
+  markerDiv.innerHTML = `
+    ${pulse ? '<div style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(194,159,96,0.22);animation:mapLandPulse 1s ease-out infinite;"></div>' : ''}
+    ${pulse ? '<div style="position:absolute;width:20px;height:20px;border-radius:50%;background:rgba(194,159,96,0.38);animation:mapLandPulse 1s ease-out 0.3s infinite;"></div>' : ''}
+    ${FOX_SVG}
+    ${label ? `<div style="position:absolute;top:35px;left:50%;transform:translateX(-50%);white-space:nowrap;border:1px solid rgba(229,224,213,0.9);border-radius:999px;background:rgba(245,243,235,0.92);color:#2B3A36;font-size:10px;font-weight:700;padding:2px 7px;box-shadow:0 8px 18px rgba(43,58,54,0.12);">${label}</div>` : ''}
+  `;
+  return markerDiv;
+}
+
 export const MapCanvas: React.FC = () => {
   const { setMapContext, flyTo } = useMapStore();
   const { cities } = useCityStore();
@@ -13,6 +40,8 @@ export const MapCanvas: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [error, setError] = useState<string>('');
+  const [userPosition, setUserPosition] = useState(DEFAULT_USER_POSITION);
+  const baseLayersRef = useRef<any[]>([]);
   const flightLayersRef = useRef<any[]>([]);
 
   useEffect(() => {
@@ -58,10 +87,28 @@ export const MapCanvas: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!navigator.geolocation) return;
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) return;
+        setUserPosition({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => undefined,
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 },
+    );
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     const { mapInstance, AMap } = useMapStore.getState();
     if (!mapInstance || !AMap || cities.length === 0) return;
 
-    mapInstance.clearMap();
+    baseLayersRef.current.forEach((layer) => { try { mapInstance.remove(layer); } catch {} });
+    baseLayersRef.current = [];
 
     cities.forEach(city => {
       const markerContent = `
@@ -82,8 +129,18 @@ export const MapCanvas: React.FC = () => {
       });
       
       mapInstance.add(marker);
+      baseLayersRef.current.push(marker);
     });
-  }, [map, cities, flyTo]);
+
+    const userMarker = new AMap.Marker({
+      position: [userPosition.lng, userPosition.lat],
+      content: foxMarkerContent('当前位置', true),
+      offset: new AMap.Pixel(-23, -23),
+      zIndex: 180,
+    });
+    mapInstance.add(userMarker);
+    baseLayersRef.current.push(userMarker);
+  }, [map, cities, flyTo, userPosition]);
 
   useEffect(() => {
     const { mapInstance, AMap } = useMapStore.getState();
@@ -94,23 +151,16 @@ export const MapCanvas: React.FC = () => {
 
     const polyline = new AMap.Polyline({
       path: [[fromPoint.lng, fromPoint.lat], [lastRoll.target_point.lng, lastRoll.target_point.lat]],
-      strokeColor: '#818cf8', strokeWeight: 2, strokeOpacity: 0.85,
+      strokeColor: '#C29F60', strokeWeight: 2, strokeOpacity: 0.9,
       strokeStyle: 'dashed', strokeDasharray: [12, 6], zIndex: 50,
     });
     mapInstance.add(polyline);
     flightLayersRef.current.push(polyline);
 
-    const markerDiv = document.createElement('div');
-    markerDiv.style.cssText = 'position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;';
-    markerDiv.innerHTML = `
-      <div style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(129,140,248,0.2);animation:mapLandPulse 1s ease-out infinite;"></div>
-      <div style="position:absolute;width:20px;height:20px;border-radius:50%;background:rgba(129,140,248,0.35);animation:mapLandPulse 1s ease-out 0.3s infinite;"></div>
-      <div style="position:relative;width:10px;height:10px;border-radius:50%;background:#818cf8;border:2px solid white;"></div>
-    `;
     const landingMarker = new AMap.Marker({
       position: [lastRoll.target_city.lng, lastRoll.target_city.lat],
-      content: markerDiv,
-      offset: new AMap.Pixel(-20, -20),
+      content: foxMarkerContent(undefined, true),
+      offset: new AMap.Pixel(-23, -23),
       zIndex: 200,
     });
     mapInstance.add(landingMarker);

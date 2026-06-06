@@ -59,7 +59,7 @@ export const AchievementUnlock: React.FC<Props> = ({ achievements, onClose }) =>
               style={{
                 left: `${(i * 13 + 5) % 95}%`,
                 top: `${40 + (i % 4) * 5}%`,
-                background: ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#f97316'][i % 5],
+                background: ['#C29F60', '#2B3A36', '#8A7A45', '#F5F3EB', '#A8894E'][i % 5],
                 animation: `achParticle ${1.2 + (i % 4) * 0.3}s ease-out ${i * 0.06}s both`,
               }}
             />
@@ -68,13 +68,13 @@ export const AchievementUnlock: React.FC<Props> = ({ achievements, onClose }) =>
 
         {/* Card */}
         <div className="relative flex flex-col items-center text-center px-8 py-10 max-w-xs" onClick={e => e.stopPropagation()}>
-          <div className="ach-badge w-24 h-24 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-6 shadow-2xl"
-            style={{ boxShadow: '0 0 60px rgba(251,191,36,0.5)' }}>
+          <div className="ach-badge w-24 h-24 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center mb-6 shadow-2xl"
+            style={{ boxShadow: '0 0 60px rgba(194,159,96,0.48)' }}>
             <span className="text-4xl">🏆</span>
           </div>
 
           <div className="ach-text space-y-2">
-            <div className="text-xs text-amber-300/80 tracking-[0.3em] uppercase font-semibold">成就解锁</div>
+            <div className="text-xs text-accent/90 tracking-[0.3em] uppercase font-semibold">成就解锁</div>
             <div className="text-white font-black text-3xl">{ach.name}</div>
             <div className="text-white/60 text-sm leading-relaxed">{ach.description}</div>
             {achievements.length > 1 && (

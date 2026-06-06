@@ -99,9 +99,43 @@ export interface ChatResponse {
   reply: string;
 }
 
+export type CommentTargetType = 'landmark' | 'food' | 'character';
+
+export interface CommentItem {
+  id: number;
+  target_type: CommentTargetType;
+  target_id: number;
+  user_id?: number | null;
+  nickname: string;
+  content: string;
+  created_at: string;
+}
+
+export interface CommentListResponse {
+  comments: CommentItem[];
+}
+
+export interface GuessCaptionResponse {
+  weibo: string;
+  moments: string;
+  hashtags: string[];
+}
+
 export interface GenerateImageResponse {
   status: string;
-  generated_image_url: string;
+  task_id: number;
+}
+
+export type ImageTaskStatusValue = 'queued' | 'running' | 'succeeded' | 'failed' | 'retryable';
+
+export interface ImageTaskResponse {
+  task_id: number;
+  status: ImageTaskStatusValue;
+  result_url?: string | null;
+  error?: string | null;
+  attempts: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AchievementBrief {
@@ -146,4 +180,47 @@ export interface AdminUploadResponse {
   cover_image_url?: string;
   image_url?: string;
   avatar_url?: string;
+}
+
+export interface AdminCoverageItem {
+  city_id: number;
+  city_name: string;
+  has_cover_image: boolean;
+  tag_count: number;
+  landmark_count: number;
+  food_count: number;
+  character_count: number;
+  missing_fields: string[];
+}
+
+export interface AdminCoverageResponse {
+  total_cities: number;
+  complete_cities: number;
+  items: AdminCoverageItem[];
+}
+
+export interface AdminUpdateResponse {
+  status: string;
+}
+
+export interface UserAssetCity {
+  id: number;
+  name: string;
+  province: string;
+  visited_at: string;
+}
+
+export interface UserPosterAsset {
+  checkin_id: number;
+  city_id: number;
+  city_name: string;
+  landmark_name?: string;
+  generated_image_url: string;
+  created_at: string;
+}
+
+export interface UserAssetsResponse {
+  visited_cities: UserAssetCity[];
+  posters: UserPosterAsset[];
+  achievement_progress: ProgressItem[];
 }

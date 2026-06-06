@@ -1,9 +1,13 @@
 import { apiClient } from './client';
 import type {
   UserResponse, CityListResponse, CityDetail,
+  Landmark, Food, Character,
   FreeVisitResponse, GameInitResponse, GameRollResponse,
   ChatResponse, GenerateImageResponse, CheckinResponse,
-  AchievementWallResponse, AdminUploadResponse,
+  AchievementWallResponse, AdminUploadResponse, ImageTaskResponse,
+  AdminCoverageResponse, AdminUpdateResponse, UserAssetsResponse,
+  CommentListResponse, CommentItem, CommentTargetType,
+  GuessCaptionResponse,
 } from './types';
 
 export const api = {
@@ -28,10 +32,38 @@ export const api = {
   chat: (userId: number, cityId: number, characterId: number, message: string) =>
     apiClient.post<unknown, ChatResponse>('/chat', { user_id: userId, city_id: cityId, character_id: characterId, message }),
 
+  getComments: (targetType: CommentTargetType, targetId: number, limit = 50) =>
+    apiClient.get<unknown, CommentListResponse>('/comments', {
+      params: { target_type: targetType, target_id: targetId, limit },
+    }),
+
+  createComment: (payload: {
+    target_type: CommentTargetType;
+    target_id: number;
+    user_id?: number | null;
+    nickname?: string;
+    content: string;
+  }) => apiClient.post<unknown, CommentItem>('/comments', payload),
+
+  generateGuessCaption: (payload: {
+    user_id?: number | null;
+    city_id: number;
+    target_name?: string;
+    scene_hint?: string;
+  }) => apiClient.post<unknown, GuessCaptionResponse>('/guess/caption', payload),
+
   generateImage: (formData: FormData) =>
     apiClient.post<unknown, GenerateImageResponse>('/checkin/generate-image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+
+  getImageTask: (taskId: number, userId: number) =>
+    apiClient.get<unknown, ImageTaskResponse>(`/checkin/image-tasks/${taskId}`, {
+      params: { user_id: userId },
+    }),
+
+  retryImageTask: (taskId: number, userId: number) =>
+    apiClient.post<unknown, GenerateImageResponse>(`/checkin/image-tasks/${taskId}/retry`, { user_id: userId }),
 
   createCheckin: (userId: number, cityId: number, landmarkId?: number, visitId?: number, generatedImageUrl?: string) =>
     apiClient.post<unknown, CheckinResponse>('/checkin', {
@@ -42,6 +74,64 @@ export const api = {
 
   getAchievements: (userId: number) =>
     apiClient.get<unknown, AchievementWallResponse>(`/users/${userId}/achievements`),
+
+  getUserAssets: (userId: number) =>
+    apiClient.get<unknown, UserAssetsResponse>(`/users/${userId}/assets`),
+
+  adminCoverage: (token: string) =>
+    apiClient.get<unknown, AdminCoverageResponse>('/admin/catalog/coverage', {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminUpdateCity: (cityId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.patch<unknown, AdminUpdateResponse>(`/admin/cities/${cityId}`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminUpdateLandmark: (landmarkId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.patch<unknown, AdminUpdateResponse>(`/admin/landmarks/${landmarkId}`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminUpdateFood: (foodId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.patch<unknown, AdminUpdateResponse>(`/admin/foods/${foodId}`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminUpdateCharacter: (characterId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.patch<unknown, AdminUpdateResponse>(`/admin/characters/${characterId}`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminCreateLandmark: (cityId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.post<unknown, Landmark>(`/admin/cities/${cityId}/landmarks`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminCreateFood: (cityId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.post<unknown, Food>(`/admin/cities/${cityId}/foods`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminCreateCharacter: (cityId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.post<unknown, Character>(`/admin/cities/${cityId}/characters`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminDeleteLandmark: (landmarkId: number, token: string) =>
+    apiClient.delete<unknown, AdminUpdateResponse>(`/admin/landmarks/${landmarkId}`, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminDeleteFood: (foodId: number, token: string) =>
+    apiClient.delete<unknown, AdminUpdateResponse>(`/admin/foods/${foodId}`, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminDeleteCharacter: (characterId: number, token: string) =>
+    apiClient.delete<unknown, AdminUpdateResponse>(`/admin/characters/${characterId}`, {
+      headers: { 'X-Admin-Token': token },
+    }),
 
   adminUploadCityCover: (cityId: number, file: File, token: string) => {
     const fd = new FormData(); fd.append('file', file);
@@ -90,4 +180,12 @@ export const api = {
     apiClient.patch<unknown, AdminUploadResponse>(`/admin/foods/${foodId}/image`, { url }, {
       headers: { 'X-Admin-Token': token },
     }),
+
+  fetchLocalImageFile: async (url: string, filename: string): Promise<File | null> => {
+    if (!url.startsWith('/static/') && !url.startsWith('/uploads/')) return null;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new File([blob], filename, { type: blob.type || 'image/png', lastModified: Date.now() });
+  },
 };

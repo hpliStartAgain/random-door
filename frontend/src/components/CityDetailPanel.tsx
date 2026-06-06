@@ -8,10 +8,11 @@ import type { Achievement } from './overlays/AchievementUnlock';
 
 interface Props {
   city: CityDetail | null;
+  visitId?: number;
   onBack: () => void;
 }
 
-export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
+export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
   const { resetView } = useMapStore();
   const { openDrawer, setCanvasMode } = useViewStore();
   const [mounted, setMounted] = useState(false);
@@ -98,7 +99,8 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
               {city.landmarks.map(lm => (
                 <div
                   key={lm.id}
-                  className="flex gap-3 rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all"
+                  onClick={() => openDrawer('gallery', { ...lm, target_type: 'landmark' })}
+                  className="flex gap-3 rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all cursor-pointer"
                 >
                   {lm.image_url ? (
                     <img src={mediaUrl(lm.image_url)} alt={lm.name} className="w-24 h-24 object-cover shrink-0" />
@@ -108,6 +110,24 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
                   <div className="py-2.5 pr-3 min-w-0">
                     <h4 className="font-serif-display font-semibold text-base text-foreground mb-1">{lm.name}</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{lm.description}</p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCanvasMode('street', {
+                          id: lm.id,
+                          city_id: city.id,
+                          name: lm.name,
+                          province: city.province,
+                          lat: city.lat,
+                          lng: city.lng,
+                          cover_image_url: lm.image_url || city.cover_image_url,
+                          tags: city.tags,
+                        });
+                      }}
+                      className="mt-2 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/15 hover:bg-primary/15 transition-colors"
+                    >
+                      全景
+                    </button>
                   </div>
                 </div>
               ))}
@@ -155,7 +175,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
               {city.foods.map(food => (
                 <div
                   key={food.id}
-                  onClick={() => openDrawer('gallery', food)}
+                  onClick={() => openDrawer('gallery', { ...food, target_type: 'food' })}
                   className="rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all cursor-pointer"
                 >
                   {food.image_url ? (
@@ -198,6 +218,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, onBack }) => {
       {showCheckin && (
         <CheckinFlow
           city={city}
+          visitId={visitId}
           onClose={() => setShowCheckin(false)}
           onAchievementUnlocked={(ach) => setUnlockedAchievements(ach)}
         />

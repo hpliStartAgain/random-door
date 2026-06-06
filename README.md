@@ -25,12 +25,13 @@ git clone <repo> && cd random-door
 
 # 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env：填入 DB_PASSWORD、LLM_API_KEY、IMAGE_API_KEY、高德 Key 等
+# 编辑 .env：至少修改 DB_PASSWORD / MYSQL_ROOT_PASSWORD，并填入高德 Key
+# LLM_API_KEY / IMAGE_API_KEY 可先留空或 mock，演示真实 AI 时再填
 
 # 3. 一键启动
 docker compose up -d        # 或 make up
 
-# 4. 初始化数据（后端会自动执行建表与 seed 导入，无需手动执行）
+# 4. 初始化数据（compose 会启动 mysql；后端会自动建表与 seed 导入）
 # make migrate 和 make seed 已废弃
 
 # 5. 访问
@@ -47,6 +48,17 @@ docker compose up -d        # 或 make up
 | `make seed` | (已废弃，启动时自动导入) |
 | `make logs` | 查看后端日志 |
 | `make lint` / `make test` | 检查 / 测试 |
+
+## AI 联调
+
+真实 Key 填入 `.env` 后，可先跑不泄露密钥的端点自检：
+
+```bash
+python scripts/ai_smoke.py --llm
+python scripts/ai_smoke.py --image --selfie path/to/selfie.jpg --confirm-image-cost
+```
+
+脚本只输出是否配置、HTTP 状态和结果摘要，不打印 `LLM_API_KEY` / `IMAGE_API_KEY`。
 
 ## 目录说明
 | 目录 | 内容 |
@@ -78,5 +90,5 @@ Navbar 右上角齿轮图标 → 输入 `ADMIN_TOKEN`（`.env` 中配置）→ �
 每 ~90s 一个 WOW，适合评委演示。
 
 ## MVP 范围与约束
-- 12 个精选城市；匿名用户（无注册登录）；不引入 Redis/MQ；AI 走外部 API；2C2G 单机部署。
+- 35 个精选演示城市；匿名用户（无注册登录）；不引入 Redis/MQ；AI 走外部 API；2C2G 单机部署。
 - 验收标准见 `docs/product/acceptance-criteria.md`（20 条）。

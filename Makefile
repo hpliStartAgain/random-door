@@ -17,7 +17,7 @@ logs:          ## 查看后端日志
 	docker compose logs -f app
 
 # ---------- 数据 ----------
-# MySQL 已抽离为外部实例，自动建表与自动导入（Seed）由后端启动时自动完成。
+# docker compose 默认启动 MySQL；自动建表与自动导入（Seed）由后端启动时自动完成。
 migrate:       ## 已废弃，应用启动自动执行
 	@echo "Migration is auto-executed on backend startup."
 

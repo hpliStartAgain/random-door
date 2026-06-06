@@ -14,9 +14,10 @@ WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/data ./data
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/static ./static
 
-# 自动创建 uploads 和 static 目录，避免因目录为空未被 Git/Docker 复制而导致构建失败
-RUN mkdir -p uploads static
+# 自动创建 uploads 目录；static 已由镜像复制，避免 named volume 遮住内置演示素材
+RUN mkdir -p uploads
 
 EXPOSE 8080
 CMD ["./server"]

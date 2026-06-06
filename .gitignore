@@ -1,6 +1,9 @@
 # .gitignore — 防止泄密与脏文件入库
 
 # ---------- 密钥与环境 ----------
+.env
+backend/.env
+frontend/.env
 .env.local
 *.pem
 *.key

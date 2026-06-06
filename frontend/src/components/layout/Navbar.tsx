@@ -20,6 +20,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onAdmin }) => {
       </div>
       
       <div className="flex items-center gap-4">
+        <button
+          onClick={() => setView('ASSETS')}
+          className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
+          我的资产
+        </button>
         <button 
           onClick={() => setView('ACHIEVEMENT')}
           className="text-sm font-medium text-foreground hover:text-primary transition-colors"

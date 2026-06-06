@@ -2,60 +2,47 @@ package ai
 
 import (
 	"fmt"
-	"strings"
 )
 
 // ChatContext contains data needed to build a chat system prompt.
 type ChatContext struct {
 	CityName      string
 	CharacterName string
-	Persona       string
-	Landmarks     []string
-	Foods         []string
 	DialectStyle  string
 }
 
 // BuildChatPrompt assembles the system prompt for character chat.
 func BuildChatPrompt(ctx ChatContext) string {
-	landmarks := "暂无"
-	if len(ctx.Landmarks) > 0 {
-		landmarks = strings.Join(ctx.Landmarks, "、")
-	}
-	foods := "暂无"
-	if len(ctx.Foods) > 0 {
-		foods = strings.Join(ctx.Foods, "、")
-	}
-	dialect := "无特殊方言"
+	dialectRule := ""
 	if ctx.DialectStyle != "" {
-		dialect = ctx.DialectStyle
+		dialectRule = fmt.Sprintf("可少量使用%s风格表达，但必须附普通话解释。", ctx.DialectStyle)
 	}
 
-	return fmt.Sprintf(`你现在扮演一个城市文化导览角色。
-
-当前城市：%s
-当前人物：%s
-人物设定：%s
-城市地标：%s
-城市美食：%s
-方言特点：%s
-
-回答要求：
-1. 保持人物风格，但不要声称自己是真实复活的人。
-2. 可以介绍城市历史、地标、美食和地方文化。
-3. 可以使用少量方言词汇，但必须给出普通话解释。
-4. 不要编造无法确认的历史事实。
-5. 回答控制在 150 字以内。
-6. 尽量引导用户继续探索当前城市。`,
-		ctx.CityName, ctx.CharacterName, ctx.Persona,
-		landmarks, foods, dialect)
+	return fmt.Sprintf("你在和用户进行角色扮演的游戏，你扮演的人物是%s。当前城市是%s。不要声称自己是真实复活的人，不编造无法确认的确定性史实。回答控制在150字以内。%s",
+		ctx.CharacterName, ctx.CityName, dialectRule)
 }
 
 // BuildImagePrompt creates the prompt for AI image generation.
 func BuildImagePrompt(cityName, landmarkName string) string {
 	return fmt.Sprintf(
-		"Create a realistic travel photo of the uploaded person visiting %s in %s. "+
-			"Keep the person's identity consistent. "+
-			"Use the landmark image as background reference. "+
-			"Natural daylight, tourist photo style, high quality, realistic composition.",
-		landmarkName, cityName)
+		"请生成一张真实旅行打卡照：保留用户上传自拍中的人物身份、脸部特征和自然姿态，"+
+			"将人物自然合成到%s的%s场景中。可参考地标图片作为背景风格和构图依据。"+
+			"自然日光、游客照片风格、高质量、真实构图。禁止生成在世公众人物、色情、暴力或侮辱内容。",
+		cityName, landmarkName)
+}
+
+// BuildGuessCaptionPrompt creates a short social caption prompt for a panorama screenshot.
+func BuildGuessCaptionPrompt(cityName, targetName, sceneHint, platform string) (systemPrompt, userPrompt string) {
+	if targetName == "" {
+		targetName = cityName
+	}
+	if sceneHint == "" {
+		sceneHint = "用户刚在全景视角中截取了一张城市文化场景。"
+	}
+	systemPrompt = "你是城市文化互动产品的社交文案助手。只写可直接发布的中文文案，不要解释生成过程，不要编造确定性史实。"
+	userPrompt = fmt.Sprintf(
+		"城市：%s\n场景：%s\n截图线索：%s\n平台：%s\n要求：围绕“猜猜我在哪”写一条自然、有悬念的短文案；微博80字以内，可带2个话题；朋友圈60字以内，不要话题。",
+		cityName, targetName, sceneHint, platform,
+	)
+	return systemPrompt, userPrompt
 }

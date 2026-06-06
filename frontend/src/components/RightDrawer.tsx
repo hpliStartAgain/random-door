@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useViewStore } from '../store/useViewStore';
 import { useUserStore } from '../store/useUserStore';
 import { api } from '../api';
+import { CommentThread } from './CommentThread';
+import type { CommentTargetType } from '../api/types';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -84,6 +86,12 @@ export const RightDrawer: React.FC = () => {
     ? <img src={drawer.data.avatar_url} alt={drawer.data.name} className="w-full h-full object-cover rounded-full" />
     : <span className="text-2xl">🗿</span>;
 
+  const commentTarget: { targetType: CommentTargetType; targetId: number } | null = drawer.data?.id
+    ? drawer.type === 'chat'
+      ? { targetType: 'character', targetId: drawer.data.id }
+      : { targetType: (drawer.data.target_type || 'food') as CommentTargetType, targetId: drawer.data.id }
+    : null;
+
   return (
     <>
       <div
@@ -91,7 +99,7 @@ export const RightDrawer: React.FC = () => {
         onClick={closeDrawer}
       />
 
-      <div className={`fixed top-0 right-0 w-[420px] h-full bg-background/95 backdrop-blur-2xl shadow-2xl z-50 border-l border-border/50 flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 w-full sm:w-[420px] max-w-[100vw] h-full bg-background/95 backdrop-blur-2xl shadow-2xl z-50 border-l border-border/50 flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
 
         <div className="h-[60px] flex items-center justify-between px-6 border-b border-border/30 bg-background/50 shrink-0">
           <h3 className="font-bold text-lg text-primary tracking-tight truncate">
@@ -165,6 +173,10 @@ export const RightDrawer: React.FC = () => {
                   ))}
                 </div>
               )}
+
+              {commentTarget && (
+                <CommentThread targetType={commentTarget.targetType} targetId={commentTarget.targetId} />
+              )}
             </div>
           )}
 
@@ -177,6 +189,9 @@ export const RightDrawer: React.FC = () => {
                 <div className="w-full h-72 bg-gradient-to-br from-secondary to-muted rounded-2xl flex items-center justify-center text-6xl shadow-inner border border-border/50">🍜</div>
               )}
               <p className="text-muted-foreground leading-relaxed text-sm">{drawer.data.description}</p>
+              {commentTarget && (
+                <CommentThread targetType={commentTarget.targetType} targetId={commentTarget.targetId} />
+              )}
             </div>
           )}
         </div>

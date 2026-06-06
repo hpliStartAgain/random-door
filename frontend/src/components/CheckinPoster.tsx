@@ -18,7 +18,7 @@ export const CheckinPoster: React.FC<Props> = ({ imageUrl, cityName, landmarkNam
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.drawImage(img, 0, 0);
-      ctx.fillStyle = '#070c18';
+      ctx.fillStyle = '#2B3A36';
       ctx.fillRect(0, img.height, img.width, BRAND_H);
       const fontSize = Math.max(12, Math.round(img.width / 28));
       ctx.font = `bold ${fontSize}px sans-serif`;
@@ -36,7 +36,7 @@ export const CheckinPoster: React.FC<Props> = ({ imageUrl, cityName, landmarkNam
   return (
     <div className="rounded-2xl overflow-hidden border border-border shadow-lg">
       <img src={imageUrl} alt="赛博打卡" className="w-full object-cover" />
-      <div className="bg-[#070c18] px-4 py-3 flex items-center justify-between">
+      <div className="bg-primary px-4 py-3 flex items-center justify-between">
         <div>
           <span className="text-white/80 text-xs font-bold tracking-widest">任意门</span>
           <span className="text-white/40 text-xs ml-2">{cityName} · {landmarkName}</span>

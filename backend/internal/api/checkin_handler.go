@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	aiPkg "github.com/your-org/city-roam/backend/internal/ai"
 	"github.com/your-org/city-roam/backend/internal/service"
 	"github.com/your-org/city-roam/backend/internal/upload"
 )
@@ -55,32 +54,103 @@ func (h *CheckinHandler) GenerateImage(c *gin.Context) {
 		return
 	}
 
-	// Save selfie
 	selfiePath, err := h.storage.Save(file, "selfies")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "failed to save file"))
 		return
 	}
 
-	result, err := h.svc.GenerateImage(c.Request.Context(), userID, cityID, landmarkID, selfiePath)
-	if err != nil {
-		if errors.Is(err, service.ErrNotFound) || errors.Is(err, service.ErrInvalidParam) {
-			writeServiceError(c, err)
+	scenePath := ""
+	if sceneFile, sceneErr := c.FormFile("scene_file"); sceneErr == nil {
+		if verr := h.validator.Validate(sceneFile); verr != nil {
+			if errors.Is(verr, upload.ErrFileTooLarge) {
+				c.JSON(http.StatusRequestEntityTooLarge, errorResp(ErrCodeFileTooLarge, "scene_file exceeds 5MB"))
+				return
+			}
+			c.JSON(http.StatusUnsupportedMediaType, errorResp(ErrCodeUnsupportedMedia, "scene_file type not supported"))
 			return
 		}
-		if errors.Is(err, aiPkg.ErrAITimeout) {
-			c.JSON(http.StatusGatewayTimeout, errorResp("AI_TIMEOUT", "image generation timeout"))
+		scenePath, err = h.storage.Save(sceneFile, "scenes")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "failed to save scene file"))
 			return
 		}
-		if errors.Is(err, aiPkg.ErrAIUpstream) {
-			c.JSON(http.StatusBadGateway, errorResp("AI_UPSTREAM_ERROR", "image generation failed"))
-			return
-		}
-		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "internal server error"))
+	} else if !errors.Is(sceneErr, http.ErrMissingFile) {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid scene_file"))
 		return
 	}
 
+	result, err := h.svc.EnqueueImage(c.Request.Context(), userID, cityID, landmarkID, selfiePath, scenePath)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusAccepted, result)
+}
+
+// GetImageTask handles GET /api/checkin/image-tasks/:task_id.
+func (h *CheckinHandler) GetImageTask(c *gin.Context) {
+	taskID, err := strconv.ParseInt(c.Param("task_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid task_id"))
+		return
+	}
+	userID, err := userIDFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", err.Error()))
+		return
+	}
+	result, err := h.svc.GetImageTask(c.Request.Context(), userID, taskID)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, result)
+}
+
+type retryImageTaskReq struct {
+	UserID int64 `json:"user_id"`
+}
+
+// RetryImageTask handles POST /api/checkin/image-tasks/:task_id/retry.
+func (h *CheckinHandler) RetryImageTask(c *gin.Context) {
+	taskID, err := strconv.ParseInt(c.Param("task_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid task_id"))
+		return
+	}
+	userID, parseErr := userIDFromRequest(c)
+	if parseErr != nil {
+		var req retryImageTaskReq
+		if err := c.ShouldBindJSON(&req); err == nil && req.UserID > 0 {
+			userID = req.UserID
+		} else {
+			c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", parseErr.Error()))
+			return
+		}
+	}
+	result, err := h.svc.RetryImageTask(c.Request.Context(), userID, taskID)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, result)
+}
+
+func userIDFromRequest(c *gin.Context) (int64, error) {
+	raw := c.Query("user_id")
+	if raw == "" {
+		raw = c.GetHeader("X-User-Id")
+	}
+	if raw == "" {
+		return 0, errors.New("user_id is required")
+	}
+	userID, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || userID <= 0 {
+		return 0, errors.New("user_id must be a positive integer")
+	}
+	return userID, nil
 }
 
 type checkinReq struct {

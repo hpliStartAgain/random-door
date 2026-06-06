@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -60,6 +61,10 @@ func (c *LLMClient) Chat(ctx context.Context, systemPrompt, userMessage string) 
 
 // ChatWithHistory sends a message with history to the LLM.
 func (c *LLMClient) ChatWithHistory(ctx context.Context, systemPrompt string, history []ChatMessage, userMessage string) (string, error) {
+	if !c.isConfigured() {
+		return "", fmt.Errorf("%w: llm is not configured", ErrAIUpstream)
+	}
+
 	messages := []ChatMessage{{Role: "system", Content: systemPrompt}}
 	messages = append(messages, history...)
 	messages = append(messages, ChatMessage{Role: "user", Content: userMessage})
@@ -95,11 +100,18 @@ func (c *LLMClient) ChatWithHistory(ctx context.Context, systemPrompt string, hi
 	return "", fmt.Errorf("%w: %v", ErrAIUpstream, lastErr)
 }
 
+func (c *LLMClient) isConfigured() bool {
+	return c != nil &&
+		!isPlaceholderValue(c.baseURL) &&
+		!isPlaceholderValue(c.apiKey) &&
+		!strings.EqualFold(strings.TrimSpace(c.baseURL), "mock")
+}
+
 func (c *LLMClient) doRequest(ctx context.Context, data []byte) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	url := c.baseURL + "/chat/completions"
+	url := strings.TrimRight(c.baseURL, "/") + "/chat/completions"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("create request: %w", err)

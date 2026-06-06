@@ -46,6 +46,7 @@ type LLMConfig struct {
 type ImageConfig struct {
 	APIBase string
 	APIKey  string
+	Model   string
 }
 
 type UploadConfig struct {
@@ -58,8 +59,13 @@ type CORSConfig struct {
 }
 
 type AIConfig struct {
-	TimeoutSeconds int
-	Timeout        time.Duration
+	TimeoutSeconds        int
+	Timeout               time.Duration
+	ChatDailyLimit        int
+	ImageDailyLimit       int
+	WorkerIntervalSeconds int
+	WorkerConcurrency     int
+	MaxTaskAttempts       int
 }
 
 type AdminConfig struct {
@@ -89,7 +95,13 @@ func Load() *Config {
 	v.SetDefault("UPLOAD_MAX_SIZE_MB", 5)
 	v.SetDefault("UPLOAD_ALLOWED_TYPES", "jpg,jpeg,png,webp")
 	v.SetDefault("AI_TIMEOUT_SECONDS", 30)
-	v.SetDefault("LLM_MODEL", "gpt-4o-mini")
+	v.SetDefault("AI_CHAT_DAILY_LIMIT", 30)
+	v.SetDefault("AI_IMAGE_DAILY_LIMIT", 5)
+	v.SetDefault("AI_WORKER_INTERVAL_SECONDS", 2)
+	v.SetDefault("AI_WORKER_CONCURRENCY", 1)
+	v.SetDefault("AI_MAX_TASK_ATTEMPTS", 3)
+	v.SetDefault("LLM_MODEL", "deepseek-v4-flash")
+	v.SetDefault("IMAGE_MODEL", "wan2.7-image-pro")
 	v.SetDefault("CORS_ALLOW_ORIGINS", "http://localhost,http://localhost:5173")
 	v.SetDefault("LOG_LEVEL", "info")
 
@@ -119,6 +131,7 @@ func Load() *Config {
 		Image: ImageConfig{
 			APIBase: v.GetString("IMAGE_API_BASE"),
 			APIKey:  v.GetString("IMAGE_API_KEY"),
+			Model:   v.GetString("IMAGE_MODEL"),
 		},
 		Upload: UploadConfig{
 			MaxSizeMB:    v.GetInt("UPLOAD_MAX_SIZE_MB"),
@@ -128,8 +141,13 @@ func Load() *Config {
 			AllowOrigins: strings.Split(v.GetString("CORS_ALLOW_ORIGINS"), ","),
 		},
 		AI: AIConfig{
-			TimeoutSeconds: timeoutSec,
-			Timeout:        time.Duration(timeoutSec) * time.Second,
+			TimeoutSeconds:        timeoutSec,
+			Timeout:               time.Duration(timeoutSec) * time.Second,
+			ChatDailyLimit:        v.GetInt("AI_CHAT_DAILY_LIMIT"),
+			ImageDailyLimit:       v.GetInt("AI_IMAGE_DAILY_LIMIT"),
+			WorkerIntervalSeconds: v.GetInt("AI_WORKER_INTERVAL_SECONDS"),
+			WorkerConcurrency:     v.GetInt("AI_WORKER_CONCURRENCY"),
+			MaxTaskAttempts:       v.GetInt("AI_MAX_TASK_ATTEMPTS"),
 		},
 		Admin: AdminConfig{
 			Token: v.GetString("ADMIN_TOKEN"),

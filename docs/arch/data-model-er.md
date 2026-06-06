@@ -2,8 +2,8 @@
 
 > 对应概要设计 14 章。逐字段见 database-detailed-design.md。
 
-## 1. 核心实体（12 个）
-User、City、CityTag、Landmark、Food、Character、CityVisit、DiceRoll、Checkin、Achievement、UserAchievement、ChatMessage。
+## 1. 核心实体（14 个）
+User、City、CityTag、Landmark、Food、Character、CityVisit、DiceRoll、Checkin、Achievement、UserAchievement、ChatMessage、AITask、AIUsageLog。
 
 ## 2. 关键抽象：CityVisit（城市访问）
 自由探索与游戏互动**不是两套系统**，而是两种「到达城市」的方式。两者最终都写入 CityVisit，用 `visit_mode`(free/game) 区分来源。到达后共享：城市详情 → AI 对话 → 赛博打卡 → 成就。这是降低双模式开发成本的核心设计。
@@ -15,6 +15,8 @@ User 1 ── N DiceRoll
 User 1 ── N Checkin
 User 1 ── N ChatMessage
 User 1 ── N UserAchievement
+User 1 ── N AITask
+User 1 ── N AIUsageLog
 
 City 1 ── N CityTag
 City 1 ── N Landmark
@@ -36,6 +38,8 @@ erDiagram
     USER ||--o{ CHECKIN : does
     USER ||--o{ CHAT_MESSAGE : sends
     USER ||--o{ USER_ACHIEVEMENT : unlocks
+    USER ||--o{ AI_TASK : owns
+    USER ||--o{ AI_USAGE_LOG : consumes
 
     CITY ||--o{ CITY_TAG : has
     CITY ||--o{ LANDMARK : has
@@ -99,6 +103,21 @@ erDiagram
       varchar role
       text content
     }
+    AI_TASK {
+      bigint id PK
+      bigint user_id FK
+      varchar type
+      varchar status
+      json input_json
+      varchar result_url
+    }
+    AI_USAGE_LOG {
+      bigint id PK
+      bigint user_id FK
+      varchar usage_type
+      date usage_date
+      int count
+    }
 ```
 
 ## 5. 读写热点（指导索引）
@@ -107,9 +126,11 @@ erDiagram
 | 成就判定 | 按 user 聚合 checkins / city_visits | checkins(user_id,created_at)、city_visits(user_id,city_id) |
 | 成就墙 | user_achievements 按 user | user_achievements UNIQUE(user_id,achievement_id) |
 | 对话历史 | 按 user+character 拉取 | chat_messages(user_id,character_id,created_at) |
+| AI 生图任务 | worker 领取 queued/retryable | ai_tasks(status,updated_at)、ai_tasks(type,status) |
+| AI 用量限制 | 按 user/day 计数 | ai_usage_logs UNIQUE(user_id,usage_type,usage_date) |
 | 城市详情 | 按 city 取 landmark/food/character | 各表 INDEX(city_id) |
 
 ## 6. 数据生命周期
 - 用户：匿名创建，长期保留（localStorage 关联）。
 - 内容（city/landmark/food/character/achievement）：seed 导入，演示期只读。
-- 行为（visit/dice/checkin/chat/user_achievement）：运行时产生，可累积。
+- 行为（visit/dice/checkin/chat/user_achievement/ai_task/ai_usage_log）：运行时产生，可累积。

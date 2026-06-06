@@ -8,7 +8,13 @@ COPY package.json package-lock.json ./
 RUN npm config set registry https://registry.npmmirror.com && npm ci --legacy-peer-deps
 
 COPY . .
-# VITE_ 前缀变量需在构建期注入（通过 --build-arg 或 .env）
+ARG VITE_AMAP_KEY
+ARG VITE_AMAP_SECURITY_CODE
+ARG VITE_API_BASE=/api
+ENV VITE_AMAP_KEY=$VITE_AMAP_KEY
+ENV VITE_AMAP_SECURITY_CODE=$VITE_AMAP_SECURITY_CODE
+ENV VITE_API_BASE=$VITE_API_BASE
+# VITE_ 前缀变量需在构建期注入。
 RUN npm run build
 
 # ---------- 运行阶段（用 caddy 托管 dist） ----------

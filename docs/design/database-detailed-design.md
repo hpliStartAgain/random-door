@@ -4,8 +4,8 @@
 > 主键统一 `id BIGINT PK AUTO_INCREMENT`；时间 `created_at DATETIME NOT NULL`，可变表加 `updated_at`。
 > 枚举用 VARCHAR + 应用层校验（不用 MySQL ENUM）。
 
-## 0. 表清单（12 张）
-users / cities / city_tags / landmarks / foods / characters / city_visits / dice_rolls / checkins / achievements / user_achievements / chat_messages
+## 0. 表清单（15 张）
+users / cities / city_tags / landmarks / foods / characters / city_visits / dice_rolls / checkins / achievements / user_achievements / chat_messages / comments / ai_tasks / ai_usage_logs
 
 ## 0.1 枚举字典
 | 字段 | 取值 |
@@ -15,8 +15,12 @@ users / cities / city_tags / landmarks / foods / characters / city_visits / dice
 | characters.character_type | history, culture, symbol |
 | checkins.checkin_mode | free, game |
 | chat_messages.role | user, assistant |
+| comments.target_type | landmark, food, character |
 | dice_rolls.direction | 北,东北,东,东南,南,西南,西,西北 |
 | achievements.rule_type | first_checkin, checkin_count, city_tag, tag_count, game_visit_count, dice_direction, dice_distance |
+| ai_tasks.type | checkin_image |
+| ai_tasks.status | queued, running, succeeded, failed, retryable |
+| ai_usage_logs.usage_type | chat, image |
 
 ## 0.2 外键策略
 MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联复杂度），改为：
@@ -212,17 +216,67 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 
 ---
 
-## 13. GORM model 映射提醒
+## 13. comments — 游客评论 / 弹幕表
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK AI | |
+| target_type | VARCHAR(32) | NOT NULL, INDEX | landmark/food/character |
+| target_id | BIGINT | NOT NULL, INDEX | 对应资源 id |
+| user_id | BIGINT | NULL, INDEX | 匿名用户，可为空 |
+| nickname | VARCHAR(64) | NOT NULL | 留空时应用层写“游客” |
+| content | VARCHAR(500) | NOT NULL | 展示在评论区与弹幕层 |
+| created_at | DATETIME | NOT NULL | |
+
+**索引**：INDEX(target_type, target_id, created_at), INDEX(user_id, created_at)。
+**一致性**：target_id 指向何表由 target_type 决定，service 层校验目标存在；MVP 不建多态物理外键。
+
+---
+
+## 14. ai_tasks — AI 异步任务表
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK AI | |
+| user_id | BIGINT | NOT NULL, INDEX | 匿名用户 |
+| type | VARCHAR(32) | NOT NULL | checkin_image |
+| status | VARCHAR(32) | NOT NULL, INDEX | queued/running/succeeded/failed/retryable |
+| input_json | JSON | NOT NULL | 城市、地标、自拍路径、prompt 输入 |
+| result_url | VARCHAR(512) | NULL | 成功后本地 `/uploads/...` |
+| error | TEXT | NULL | 最近一次失败原因 |
+| attempts | INT | NOT NULL DEFAULT 0 | 已尝试次数 |
+| created_at / updated_at | DATETIME | NOT NULL | |
+
+**索引**：INDEX(user_id, created_at), INDEX(status, updated_at), INDEX(type, status)。
+
+---
+
+## 15. ai_usage_logs — AI 用量流水表
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK AI | |
+| user_id | BIGINT | NOT NULL, INDEX | |
+| usage_type | VARCHAR(32) | NOT NULL | chat/image |
+| usage_date | DATE | NOT NULL | 按匿名用户本地日期限流 |
+| count | INT | NOT NULL DEFAULT 0 | 当日计数 |
+| created_at / updated_at | DATETIME | NOT NULL | |
+
+**索引**：UNIQUE(user_id, usage_type, usage_date), INDEX(usage_date)。
+
+---
+
+## 15. GORM model 映射提醒
 - 每个 model struct 对应一表，含 `gorm:"column:...;index"` 与 `json:"..."` tag。
 - json 字段名需与 api-contract.md 一致。
 - created_at/updated_at 用 GORM 自动维护（autoCreateTime/autoUpdateTime）。
 
 ---
 
-## 14. Seed 幂等导入
+## 16. Seed 幂等导入
 
 - `backend/internal/seed` 在写库前完整解析并校验 `cities.json` 与 `achievements.json`。
-- 城市固定为 12 个精选城市；每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
+- 城市数量允许 12~100 个；演示版 seed 固定为 35 个精选城市。每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
 - 启动时在单一事务内执行 upsert；任何一条失败则整体回滚并阻止服务启动，避免半套演示数据。
 - 自然键：`cities.name`、`city_tags(city_id,tag)`、`landmarks(city_id,name)`、`foods(city_id,name)`、`characters(city_id,name)`、`achievements.code`。
 - 重复启动会更新已有内容并补齐缺失内容，不要求手动清库或执行临时脚本。

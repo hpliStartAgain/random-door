@@ -7,6 +7,7 @@ import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { RightDrawer } from './components/RightDrawer';
 import { AchievementPage } from './pages/AchievementPage';
+import { AssetPage } from './pages/AssetPage';
 import { WelcomeOverlay } from './components/overlays/WelcomeOverlay';
 import { DiceConsole } from './components/overlays/DiceConsole';
 import { Toast } from './components/Toast';
@@ -60,6 +61,12 @@ function App() {
       {useViewStore(s => s.currentView) === 'ACHIEVEMENT' && (
          <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur overflow-y-auto">
            <AchievementPage />
+         </div>
+      )}
+
+      {useViewStore(s => s.currentView) === 'ASSETS' && (
+         <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur overflow-y-auto">
+           <AssetPage />
          </div>
       )}
 
