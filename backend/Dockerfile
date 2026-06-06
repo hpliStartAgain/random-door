@@ -6,6 +6,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
 COPY . .
+RUN mkdir -p static uploads
 RUN go build -o server ./cmd/server/main.go
 
 FROM alpine:latest
