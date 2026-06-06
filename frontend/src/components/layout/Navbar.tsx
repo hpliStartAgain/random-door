@@ -11,9 +11,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onAdmin }) => {
   return (
     <header className="absolute top-0 left-0 w-full h-[60px] bg-background/90 backdrop-blur-md border-b border-border z-30 flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('HOME')}>
-        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs">
-          任
-        </div>
+        <img src="/icon-transparent.png" alt="任意门" className="w-7 h-7 rounded-full object-contain" />
         <span className="font-bold text-lg text-foreground tracking-wide">
           任意门 <span className="font-normal text-muted-foreground ml-2 text-sm">推开门，遇见大美中国</span>
         </span>

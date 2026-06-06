@@ -67,6 +67,13 @@ export const WelcomeOverlay: React.FC = () => {
 
         {/* Main content */}
         <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl w-full">
+          {/* Logo */}
+          <img
+            src="/icon-transparent.png"
+            alt="任意门"
+            className="wfu-0 w-24 h-24 sm:w-28 sm:h-28 object-contain mb-5 drop-shadow-[0_16px_32px_rgba(43,58,54,0.18)]"
+          />
+
           {/* Badge */}
           <div className="wfu-0 mb-6">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.35em] text-accent uppercase border border-accent/30 bg-accent/10 rounded-full px-4 py-1.5">

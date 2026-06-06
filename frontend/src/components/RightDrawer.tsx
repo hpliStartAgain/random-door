@@ -133,8 +133,13 @@ export const RightDrawer: React.FC = () => {
                   const isLastAssistant = i === messages.length - 1 && msg.role === 'assistant';
                   const content = isLastAssistant ? typingText : msg.content;
                   return msg.role === 'user' ? (
-                    <div key={i} className="self-end bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[82%] text-sm shadow-md whitespace-pre-wrap">
-                      {msg.content}
+                    <div key={i} className="self-end flex gap-2.5 items-start max-w-[82%] flex-row-reverse">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden mt-0.5">
+                        <img src="/icon-transparent.png" alt="我" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm shadow-md whitespace-pre-wrap">
+                        {msg.content}
+                      </div>
                     </div>
                   ) : (
                     <div key={i} className="self-start bg-card border border-border px-4 py-3 rounded-2xl rounded-tl-sm max-w-[82%] text-sm shadow-md flex gap-3 items-start">

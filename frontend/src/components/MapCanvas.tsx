@@ -8,16 +8,7 @@ import { useViewStore } from '../store/useViewStore';
 const DEFAULT_USER_POSITION = { lat: 39.9042, lng: 116.4074 };
 
 const FOX_SVG = `
-  <svg viewBox="0 0 96 96" style="position:relative;width:34px;height:34px;filter:drop-shadow(0 8px 12px rgba(43,58,54,0.28));">
-    <path d="M18 28 L33 15 L37 35 Z" fill="#D47A3C"></path>
-    <path d="M78 28 L63 15 L59 35 Z" fill="#D47A3C"></path>
-    <path d="M24 31 C28 15 68 15 72 31 C84 48 75 78 48 82 C21 78 12 48 24 31Z" fill="#E48743"></path>
-    <path d="M30 32 C37 43 42 55 48 80 C54 55 59 43 66 32 C60 68 36 68 30 32Z" fill="#FFF2D7" opacity="0.96"></path>
-    <circle cx="36" cy="47" r="3.8" fill="#22302C"></circle>
-    <circle cx="60" cy="47" r="3.8" fill="#22302C"></circle>
-    <path d="M45 58 Q48 61 51 58" fill="none" stroke="#22302C" stroke-width="2.4" stroke-linecap="round"></path>
-    <path d="M48 54 L43 59 L53 59 Z" fill="#22302C"></path>
-  </svg>
+  <img src="/icon-transparent.png" alt="我" style="position:relative;width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(43,58,54,0.28));" />
 `;
 
 function foxMarkerContent(label?: string, pulse = false): HTMLDivElement {
