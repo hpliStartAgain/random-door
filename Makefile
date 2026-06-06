@@ -5,16 +5,16 @@
 
 # ---------- Docker ----------
 up:            ## 启动全部容器
-	docker compose up -d
+	docker-compose up -d
 
 down:          ## 停止并移除容器
-	docker compose down
+	docker-compose down
 
 build:         ## 构建镜像
-	docker compose build
+	docker-compose build
 
 logs:          ## 查看后端日志
-	docker compose logs -f app
+	docker-compose logs -f app
 
 # ---------- 数据 ----------
 # docker compose 默认启动 MySQL；自动建表与自动导入（Seed）由后端启动时自动完成。
