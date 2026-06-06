@@ -1,45 +1,14 @@
 # docker-compose.yml — 2C2G 单机一键部署
-# 默认启动内置 MySQL 8；如需外部 MySQL，可将 app 的 DB_HOST/DB_PORT 指向外部实例。
+# MySQL 使用外部实例，请在 .env 中配置 DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME。
 version: "3.8"
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: city_roam_mysql
-    environment:
-      MYSQL_DATABASE: ${DB_NAME:-city_roam}
-      MYSQL_USER: ${DB_USER:-city_roam}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-city_roam_password}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_change_me}
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-      - --innodb-buffer-pool-size=256M
-      - --max-connections=50
-      - --performance-schema=OFF
-    volumes:
-      - mysql_data:/var/lib/mysql
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 900M
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
   app:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: city_roam_app
     env_file: .env
-    depends_on:
-      mysql:
-        condition: service_healthy
     ports:
       - "8080:8080"
     volumes:
@@ -86,5 +55,4 @@ services:
       start_period: 15s
 
 volumes:
-  mysql_data:
   uploads:
