@@ -22,7 +22,20 @@ func (r *fakeProfileUserRepo) FindByID(context.Context, int64) (*model.User, err
 	return r.user, nil
 }
 
+func (r *fakeProfileUserRepo) FindByUsername(context.Context, string) (*model.User, error) {
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (r *fakeProfileUserRepo) Create(context.Context, *model.User) error {
+	return nil
+}
+
 func (r *fakeProfileUserRepo) UpdateProfile(_ context.Context, _ int64, fields map[string]any) error {
+	r.fields = fields
+	return nil
+}
+
+func (r *fakeProfileUserRepo) UpdateAccount(_ context.Context, _ int64, fields map[string]any) error {
 	r.fields = fields
 	return nil
 }

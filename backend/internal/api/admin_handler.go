@@ -57,6 +57,90 @@ func (h *AdminHandler) Coverage(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+func (h *AdminHandler) ListTags(c *gin.Context) {
+	result, err := h.svc.ListTags(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "internal server error"))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *AdminHandler) RenameTag(c *gin.Context) {
+	var req service.RenameTagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "tag is required"))
+		return
+	}
+	if err := h.svc.RenameTag(c.Request.Context(), c.Param("tag"), req); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+}
+
+func (h *AdminHandler) DeleteTag(c *gin.Context) {
+	if err := h.svc.DeleteTag(c.Request.Context(), c.Param("tag")); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
+func (h *AdminHandler) ListAchievements(c *gin.Context) {
+	result, err := h.svc.ListAchievements(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorResp("INTERNAL_ERROR", "internal server error"))
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func (h *AdminHandler) CreateAchievement(c *gin.Context) {
+	var req service.CreateAchievementRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid achievement payload"))
+		return
+	}
+	result, err := h.svc.CreateAchievement(c.Request.Context(), req)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, result)
+}
+
+func (h *AdminHandler) UpdateAchievement(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("achievement_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid achievement_id"))
+		return
+	}
+	var req service.UpdateAchievementRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid achievement payload"))
+		return
+	}
+	if err := h.svc.UpdateAchievement(c.Request.Context(), id, req); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+}
+
+func (h *AdminHandler) DeleteAchievement(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("achievement_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid achievement_id"))
+		return
+	}
+	if err := h.svc.DeleteAchievement(c.Request.Context(), id); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
+}
+
 // UpdateCity handles PATCH /api/admin/cities/:city_id.
 func (h *AdminHandler) UpdateCity(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("city_id"), 10, 64)
@@ -311,6 +395,25 @@ func (h *AdminHandler) UploadFoodImage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"image_url": urlPath})
 }
 
+// UploadAchievementBadge handles POST /api/admin/achievements/:achievement_id/badge
+func (h *AdminHandler) UploadAchievementBadge(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("achievement_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid achievement_id"))
+		return
+	}
+	urlPath, err := h.saveImage(c, "badges")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", err.Error()))
+		return
+	}
+	if err := h.svc.UpdateAchievement(c.Request.Context(), id, service.UpdateAchievementRequest{BadgeURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"badge_url": urlPath})
+}
+
 func (h *AdminHandler) saveImage(c *gin.Context, subDir string) (string, error) {
 	fh, err := c.FormFile("file")
 	if err != nil {
@@ -422,4 +525,28 @@ func (h *AdminHandler) BindFoodImageURL(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"image_url": urlPath})
+}
+
+// BindAchievementBadgeURL handles PATCH /api/admin/achievements/:achievement_id/badge
+func (h *AdminHandler) BindAchievementBadgeURL(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("achievement_id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "invalid achievement_id"))
+		return
+	}
+	var req urlBindReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp("INVALID_PARAM", "url is required"))
+		return
+	}
+	urlPath, err := h.svc.ImportImageURL(c.Request.Context(), req.URL)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	if err := h.svc.UpdateAchievement(c.Request.Context(), id, service.UpdateAchievementRequest{BadgeURL: &urlPath}); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"badge_url": urlPath})
 }

@@ -18,8 +18,9 @@
 |---|---|---|---|
 | first_checkin | "" | checkins | 完成任意首次打卡 |
 | checkin_count | "5" | checkins | 累计打卡 ≥5 次 |
-| city_tag | "ancient_capital" | checkins+city_tags | 打卡任意一座带该标签城市 |
-| tag_count | "jiangnan:3" | checkins+city_tags | 打卡 ≥3 座带该标签城市(城市去重) |
+| visit_count | "5" | city_visits | 累计到过 ≥5 座城市(城市去重) |
+| city_tag | "古都" | city_visits+city_tags | 到过任意一座带该标签城市 |
+| tag_count | "江南:3" | city_visits+city_tags | 到过 ≥3 座带该标签城市(城市去重) |
 | game_visit_count | "5" | city_visits(mode=game) | 游戏模式到达 ≥5 城 |
 | dice_direction | "北:2" | dice_rolls | 连续 ≥2 次掷出该方向 |
 | dice_distance | "1200" | dice_rolls | 单次掷出 ≥该距离 |
@@ -29,11 +30,11 @@
 | code | name | rule_type | rule_value |
 |---|---|---|---|
 | first_checkin | 初次打卡 | first_checkin | "" |
-| ancient_capital_first | 古都初见 | city_tag | "ancient_capital" |
-| ancient_capital_tour | 古都巡礼 | tag_count | "ancient_capital:3" |
-| jiangnan_rain | 烟雨江南 | tag_count | "jiangnan:3" |
-| dongbei_first | 东北初见 | city_tag | "dongbei" |
-| foodie_traveler | 美食旅人 | tag_count | "spicy_food:3" |
+| ancient_capital_first | 古都初见 | city_tag | "古都" |
+| ancient_capital_tour | 古都巡礼 | tag_count | "古都:3" |
+| jiangnan_rain | 烟雨江南 | tag_count | "江南:3" |
+| dongbei_first | 东北初见 | city_tag | "东北" |
+| foodie_traveler | 美食旅人 | tag_count | "美食:3" |
 
 游戏专属：
 | code | name | rule_type | rule_value |
@@ -51,8 +52,9 @@
 // 用户行为快照，由 evaluator 一次性查好传入，避免每条规则重复查库
 type UserStats struct {
   CheckinCount    int
-  CheckinCityTags map[string]int   // 标签 → 去重城市数(基于打卡过的城市)
-  CheckinTagAny   map[string]bool  // 是否打卡过某标签城市
+  VisitedCityCount int              // 到过城市去重数
+  VisitedCityTags map[string]int    // 标签 → 去重城市数(基于到过的城市)
+  VisitedTagAny   map[string]bool   // 是否到过某标签城市
   GameVisitCount  int              // city_visits mode=game 去重城市数
   MaxDiceDistance int              // 历史最大单次距离
   MaxSameDirRun   map[string]int   // 各方向"最大连续次数"
@@ -64,8 +66,9 @@ func Match(ruleType, ruleValue string, s UserStats) bool
 ```text
 first_checkin    : s.CheckinCount >= 1
 checkin_count    : s.CheckinCount >= atoi(ruleValue)
-city_tag         : s.CheckinTagAny[ruleValue] == true
-tag_count        : 解析"tag:n" → s.CheckinCityTags[tag] >= n
+visit_count      : s.VisitedCityCount >= atoi(ruleValue)
+city_tag         : s.VisitedTagAny[ruleValue] == true
+tag_count        : 解析"tag:n" → s.VisitedCityTags[tag] >= n
 game_visit_count : s.GameVisitCount >= atoi(ruleValue)
 dice_distance    : s.MaxDiceDistance >= atoi(ruleValue)
 dice_direction   : 解析"方向:n" → s.MaxSameDirRun[方向] >= n
@@ -82,8 +85,8 @@ func Evaluate(userID int64, repos Repos) (newlyUnlocked []Achievement, err error
 ### 5.2 主流程（对应概要 18.4）
 ```text
 1. 一次性构建 UserStats：
-   - checkin_repo: CheckinCount、按城市标签聚合(连 city_tags)
-   - visit_repo:   game 模式去重城市数
+   - checkin_repo: CheckinCount
+   - visit_repo:   到过城市去重数、按城市标签聚合(连 city_tags)、game 模式去重城市数
    - dice_repo:    历史最大距离、各方向最大连续次数(按时间排序扫描)
 2. achievement_repo.ListAll() 取全部成就定义
 3. achievement_repo.ListUserAchievements(userID) 取已解锁 code 集合
@@ -105,7 +108,7 @@ func Evaluate(userID int64, repos Repos) (newlyUnlocked []Achievement, err error
 - "一路向北 北:2" = maxRun["北"] >= 2。
 
 ## 6. 触发时机与幂等
-- 触发：POST /api/checkin 写入 checkins 后，同一事务/紧随其后调用 Evaluate。
+- 触发：POST /api/visits/free、POST /api/game/roll 写入 city_visits 后自动调用 Evaluate；POST /api/checkin 写入 checkins 后仍会调用 Evaluate 以支持打卡类成就。
 - 幂等：user_achievements UNIQUE(user_id, achievement_id) 保证不重复；Evaluate 已先过滤已解锁。
 - 返回前端的 unlocked_achievements 只含"本次新解锁"。
 

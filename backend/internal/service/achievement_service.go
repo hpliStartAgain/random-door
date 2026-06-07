@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/your-org/city-roam/backend/internal/achievement"
 	"github.com/your-org/city-roam/backend/internal/model"
 	"github.com/your-org/city-roam/backend/internal/repository"
 	"gorm.io/gorm"
@@ -120,9 +121,30 @@ func (s *AchievementService) Wall(ctx context.Context, userID int64) (*WallResul
 	}, nil
 }
 
+func (s *AchievementService) UnlockForUser(ctx context.Context, userID int64) ([]model.Achievement, error) {
+	if userID <= 0 {
+		return nil, invalidParam("user_id must be a positive integer")
+	}
+	if err := s.ensureUserExists(ctx, userID); err != nil {
+		return nil, err
+	}
+	return achievement.Evaluate(ctx, userID, achievement.Repos{DB: s.db})
+}
+
+func briefAchievements(achievements []model.Achievement) []AchievementBrief {
+	briefs := make([]AchievementBrief, 0, len(achievements))
+	for _, a := range achievements {
+		briefs = append(briefs, AchievementBrief{
+			Code: a.Code, Name: a.Name, Description: a.Description,
+		})
+	}
+	return briefs
+}
+
 type progressStats struct {
 	checkinCount   int
 	tagCityCounts  map[string]int
+	visitCityCount int
 	gameVisitCount int
 }
 
@@ -136,15 +158,16 @@ func buildProgressStats(ctx context.Context, userID int64, db *gorm.DB) (progres
 	}
 	s.checkinCount = int(checkinCount)
 
-	var checkinCityIDs []int64
-	if err := db.WithContext(ctx).Model(&model.Checkin{}).
-		Where("user_id = ?", userID).Distinct("city_id").Pluck("city_id", &checkinCityIDs).Error; err != nil {
-		return s, fmt.Errorf("pluck checkin cities: %w", err)
+	var visitedCityIDs []int64
+	if err := db.WithContext(ctx).Model(&model.CityVisit{}).
+		Where("user_id = ?", userID).Distinct("city_id").Pluck("city_id", &visitedCityIDs).Error; err != nil {
+		return s, fmt.Errorf("pluck visited cities: %w", err)
 	}
+	s.visitCityCount = len(visitedCityIDs)
 
-	if len(checkinCityIDs) > 0 {
+	if len(visitedCityIDs) > 0 {
 		var tags []model.CityTag
-		if err := db.WithContext(ctx).Where("city_id IN ?", checkinCityIDs).Find(&tags).Error; err != nil {
+		if err := db.WithContext(ctx).Where("city_id IN ?", visitedCityIDs).Find(&tags).Error; err != nil {
 			return s, fmt.Errorf("find city tags: %w", err)
 		}
 		tagCities := make(map[string]map[int64]bool)
@@ -182,6 +205,11 @@ func calculateProgress(ach model.Achievement, stats progressStats) *ProgressItem
 		if parts != nil {
 			current := stats.tagCityCounts[parts.tag]
 			return &ProgressItem{Code: ach.Code, Current: current, Target: parts.count}
+		}
+	case "visit_count":
+		target := parseIntOrZero(ach.RuleValue)
+		if target > 0 {
+			return &ProgressItem{Code: ach.Code, Current: stats.visitCityCount, Target: target}
 		}
 	case "game_visit_count":
 		target := parseIntOrZero(ach.RuleValue)

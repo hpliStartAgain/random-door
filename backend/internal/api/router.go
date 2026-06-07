@@ -50,6 +50,8 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 		// User
 		api.POST("/users/anonymous", h.Visit.CreateAnonymousUser)
 		if h.User != nil {
+			api.POST("/auth/register", h.User.Register)
+			api.POST("/auth/login", h.User.Login)
 			api.GET("/users/:user_id/profile", h.User.Profile)
 			api.PATCH("/users/:user_id/profile", h.User.UpdateProfile)
 		}
@@ -93,6 +95,13 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 			admin := api.Group("/admin", h.Admin.AuthMiddleware())
 			{
 				admin.GET("/catalog/coverage", h.Admin.Coverage)
+				admin.GET("/tags", h.Admin.ListTags)
+				admin.PATCH("/tags/:tag", h.Admin.RenameTag)
+				admin.DELETE("/tags/:tag", h.Admin.DeleteTag)
+				admin.GET("/achievements", h.Admin.ListAchievements)
+				admin.POST("/achievements", h.Admin.CreateAchievement)
+				admin.PATCH("/achievements/:achievement_id", h.Admin.UpdateAchievement)
+				admin.DELETE("/achievements/:achievement_id", h.Admin.DeleteAchievement)
 				admin.PATCH("/cities/:city_id", h.Admin.UpdateCity)
 				admin.PATCH("/landmarks/:landmark_id", h.Admin.UpdateLandmark)
 				admin.PATCH("/characters/:character_id", h.Admin.UpdateCharacter)
@@ -108,11 +117,13 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 				admin.POST("/landmarks/:landmark_id/image", h.Admin.UploadLandmarkImage)
 				admin.POST("/characters/:character_id/avatar", h.Admin.UploadCharacterAvatar)
 				admin.POST("/foods/:food_id/image", h.Admin.UploadFoodImage)
+				admin.POST("/achievements/:achievement_id/badge", h.Admin.UploadAchievementBadge)
 				// URL bind (paste external link)
 				admin.PATCH("/cities/:city_id/cover-image", h.Admin.BindCityCoverURL)
 				admin.PATCH("/landmarks/:landmark_id/image", h.Admin.BindLandmarkImageURL)
 				admin.PATCH("/characters/:character_id/avatar", h.Admin.BindCharacterAvatarURL)
 				admin.PATCH("/foods/:food_id/image", h.Admin.BindFoodImageURL)
+				admin.PATCH("/achievements/:achievement_id/badge", h.Admin.BindAchievementBadgeURL)
 			}
 		}
 	}

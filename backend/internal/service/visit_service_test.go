@@ -124,7 +124,7 @@ func TestCreateFreeVisit(t *testing.T) {
 		)
 
 		got, err := svc.CreateFreeVisit(context.Background(), 1, 3, "")
-		if err != nil || got.ID != 1001 || created.VisitMode != "free" || created.Source == nil || *created.Source != "map_click" || created.DiceRollID != nil {
+		if err != nil || got.Visit.ID != 1001 || created.VisitMode != "free" || created.Source == nil || *created.Source != "map_click" || created.DiceRollID != nil {
 			t.Fatalf("CreateFreeVisit() = %#v, %v; want free map_click visit", got, err)
 		}
 	})

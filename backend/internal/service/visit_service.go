@@ -25,14 +25,24 @@ type VisitRepository interface {
 	Create(ctx context.Context, visit *model.CityVisit) error
 }
 
+type visitAchievementEvaluator interface {
+	UnlockForUser(ctx context.Context, userID int64) ([]model.Achievement, error)
+}
+
 type VisitService struct {
-	userRepo  UserRepository
-	cityRepo  CityFinder
-	visitRepo VisitRepository
+	userRepo     UserRepository
+	cityRepo     CityFinder
+	visitRepo    VisitRepository
+	achievements visitAchievementEvaluator
 }
 
 func NewVisitService(userRepo UserRepository, cityRepo CityFinder, visitRepo VisitRepository) *VisitService {
 	return &VisitService{userRepo: userRepo, cityRepo: cityRepo, visitRepo: visitRepo}
+}
+
+func (s *VisitService) WithAchievementEvaluator(evaluator visitAchievementEvaluator) *VisitService {
+	s.achievements = evaluator
+	return s
 }
 
 // CreateAnonymousUser finds or creates a user by anonymous_id.
@@ -63,7 +73,12 @@ func (s *VisitService) CreateAnonymousUser(ctx context.Context, anonymousID stri
 }
 
 // CreateFreeVisit records a free-mode city visit.
-func (s *VisitService) CreateFreeVisit(ctx context.Context, userID, cityID int64, source string) (*model.CityVisit, error) {
+type FreeVisitResult struct {
+	Visit                *model.CityVisit
+	UnlockedAchievements []AchievementBrief
+}
+
+func (s *VisitService) CreateFreeVisit(ctx context.Context, userID, cityID int64, source string) (*FreeVisitResult, error) {
 	if userID <= 0 {
 		return nil, invalidParam("user_id must be a positive integer")
 	}
@@ -99,7 +114,15 @@ func (s *VisitService) CreateFreeVisit(ctx context.Context, userID, cityID int64
 	if err := s.visitRepo.Create(ctx, visit); err != nil {
 		return nil, fmt.Errorf("create visit: %w", err)
 	}
-	return visit, nil
+	var unlocked []AchievementBrief
+	if s.achievements != nil {
+		achievements, err := s.achievements.UnlockForUser(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("evaluate achievements: %w", err)
+		}
+		unlocked = briefAchievements(achievements)
+	}
+	return &FreeVisitResult{Visit: visit, UnlockedAchievements: unlocked}, nil
 }
 
 func normalizeAnonymousID(anonymousID string) (string, error) {

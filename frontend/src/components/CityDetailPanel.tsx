@@ -99,7 +99,10 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
               {city.landmarks.map(lm => (
                 <div
                   key={lm.id}
-                  onClick={() => { flyTo(city.lng, city.lat, 15); openDrawer('gallery', { ...lm, target_type: 'landmark' }); }}
+                  onClick={() => {
+                    flyTo(lm.lng ?? city.lng, lm.lat ?? city.lat, 15);
+                    openDrawer('gallery', { ...lm, target_type: 'landmark' });
+                  }}
                   className="flex gap-3 rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all cursor-pointer"
                 >
                   {lm.image_url ? (
@@ -118,8 +121,8 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                           city_id: city.id,
                           name: lm.name,
                           province: city.province,
-                          lat: city.lat,
-                          lng: city.lng,
+                          lat: lm.lat ?? city.lat,
+                          lng: lm.lng ?? city.lng,
                           cover_image_url: lm.image_url || city.cover_image_url,
                           soundscape_url: lm.soundscape_url,
                           tags: city.tags,

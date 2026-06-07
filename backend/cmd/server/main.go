@@ -121,6 +121,8 @@ func main() {
 	guessSvc := service.NewGuessService(cityRepo, llmClient)
 	guessChallengeSvc := service.NewGuessChallengeService(guessChallengeRepo, cityRepo, storage)
 	achSvc := service.NewAchievementService(db, achRepo)
+	visitSvc.WithAchievementEvaluator(achSvc)
+	gameSvc.WithAchievementEvaluator(achSvc)
 	checkinStore := repository.NewCheckinStore(db, checkinRepo)
 	checkinSvc := service.NewCheckinService(userRepo, cityRepo, checkinStore, imageClient, storage).
 		WithImageTasks(aiTaskRepo, aiUsageRepo, cfg.AI.ImageDailyLimit, cfg.AI.MaxTaskAttempts).

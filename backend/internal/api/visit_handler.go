@@ -54,15 +54,16 @@ func (h *VisitHandler) CreateFreeVisit(c *gin.Context) {
 		return
 	}
 
-	visit, err := h.svc.CreateFreeVisit(c.Request.Context(), req.UserID, req.CityID, req.Source)
+	result, err := h.svc.CreateFreeVisit(c.Request.Context(), req.UserID, req.CityID, req.Source)
 	if err != nil {
 		writeServiceError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"visit_id":   visit.ID,
-		"city_id":    visit.CityID,
-		"visit_mode": visit.VisitMode,
+		"visit_id":              result.Visit.ID,
+		"city_id":               result.Visit.CityID,
+		"visit_mode":            result.Visit.VisitMode,
+		"unlocked_achievements": result.UnlockedAchievements,
 	})
 }

@@ -17,6 +17,7 @@ func TestSchemaDefinesTablesAndRequiredIndexes(t *testing.T) {
 
 	required := []string{
 		"UNIQUE KEY uk_anonymous_id (anonymous_id)",
+		"UNIQUE KEY uk_user_username (username)",
 		"KEY idx_user_current_city (current_city_id)",
 		"UNIQUE KEY uk_city_name (name)",
 		"UNIQUE KEY uk_ct_city_tag (city_id, tag)",
@@ -98,6 +99,7 @@ func TestModelIndexTagsMatchSchemaContract(t *testing.T) {
 		field string
 		want  []string
 	}{
+		{User{}, "Username", []string{"uniqueIndex:uk_user_username"}},
 		{User{}, "CurrentCityID", []string{"index:idx_user_current_city"}},
 		{City{}, "Name", []string{"uniqueIndex:uk_city_name"}},
 		{CityTag{}, "CityID", []string{"index:idx_ct_city", "uniqueIndex:uk_ct_city_tag,priority:1"}},
@@ -159,8 +161,12 @@ func TestModelIndexTagsMatchSchemaContract(t *testing.T) {
 func TestProfileAndSoundscapeFieldsContract(t *testing.T) {
 	schema := readSchema(t)
 	for _, col := range []string{
+		"username VARCHAR(64)",
+		"password_hash VARCHAR(255)",
 		"age INT",
 		"home_region VARCHAR(64)",
+		"lat DOUBLE",
+		"lng DOUBLE",
 		"soundscape_url VARCHAR(512)",
 	} {
 		if !strings.Contains(schema, col) {
@@ -175,6 +181,8 @@ func TestProfileAndSoundscapeFieldsContract(t *testing.T) {
 	}{
 		{User{}, "Age", []string{"column:age", `json:"age,omitempty"`}},
 		{User{}, "HomeRegion", []string{"column:home_region", `json:"home_region,omitempty"`}},
+		{Landmark{}, "Lat", []string{"column:lat", `json:"lat,omitempty"`}},
+		{Landmark{}, "Lng", []string{"column:lng", `json:"lng,omitempty"`}},
 		{Landmark{}, "SoundscapeURL", []string{"column:soundscape_url", `json:"soundscape_url,omitempty"`}},
 	}
 	for _, check := range checks {

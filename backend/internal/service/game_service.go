@@ -33,15 +33,21 @@ type GameStore interface {
 }
 
 type GameService struct {
-	userRepo  GameUserFinder
-	cityRepo  GameCityRepository
-	visitRepo GameVisitReader
-	store     GameStore
-	rng       geo.IntnSource
+	userRepo     GameUserFinder
+	cityRepo     GameCityRepository
+	visitRepo    GameVisitReader
+	store        GameStore
+	achievements visitAchievementEvaluator
+	rng          geo.IntnSource
 }
 
 func NewGameService(userRepo GameUserFinder, cityRepo GameCityRepository, visitRepo GameVisitReader, store GameStore) *GameService {
 	return &GameService{userRepo: userRepo, cityRepo: cityRepo, visitRepo: visitRepo, store: store}
+}
+
+func (s *GameService) WithAchievementEvaluator(evaluator visitAchievementEvaluator) *GameService {
+	s.achievements = evaluator
+	return s
 }
 
 // WithRandSource overrides the random source; used by tests for deterministic rolls.
@@ -134,11 +140,12 @@ func (s *GameService) Init(ctx context.Context, userID int64, lat, lng float64) 
 
 // RollResult contains all data from a dice roll.
 type RollResult struct {
-	VisitID     int64  `json:"visit_id"`
-	DiceRollID  int64  `json:"dice_roll_id"`
-	Direction   string `json:"direction"`
-	DistanceKm  int    `json:"distance_km"`
-	TargetPoint struct {
+	VisitID              int64              `json:"visit_id"`
+	DiceRollID           int64              `json:"dice_roll_id"`
+	Direction            string             `json:"direction"`
+	DistanceKm           int                `json:"distance_km"`
+	UnlockedAchievements []AchievementBrief `json:"unlocked_achievements"`
+	TargetPoint          struct {
 		Lat float64 `json:"lat"`
 		Lng float64 `json:"lng"`
 	} `json:"target_point"`
@@ -234,15 +241,24 @@ func (s *GameService) Roll(ctx context.Context, userID, fromCityID int64, lat, l
 	if err := s.store.CreateRollWithVisit(ctx, &diceRoll, &visit); err != nil {
 		return nil, fmt.Errorf("persist dice roll: %w", err)
 	}
+	var unlocked []AchievementBrief
+	if s.achievements != nil {
+		achievements, err := s.achievements.UnlockForUser(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("evaluate achievements: %w", err)
+		}
+		unlocked = briefAchievements(achievements)
+	}
 
 	slog.Info("dice roll completed", "user_id", userID, "to_city", targetCity.Name,
 		"dice_roll_id", diceRoll.ID, "visit_id", visit.ID)
 
 	return &RollResult{
-		VisitID:    visit.ID,
-		DiceRollID: diceRoll.ID,
-		Direction:  dir.Name,
-		DistanceKm: dist,
+		VisitID:              visit.ID,
+		DiceRollID:           diceRoll.ID,
+		Direction:            dir.Name,
+		DistanceKm:           dist,
+		UnlockedAchievements: unlocked,
 		TargetPoint: struct {
 			Lat float64 `json:"lat"`
 			Lng float64 `json:"lng"`

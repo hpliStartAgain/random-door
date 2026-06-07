@@ -32,33 +32,41 @@ func TestMatch(t *testing.T) {
 		},
 		{
 			name:     "city_tag any matched",
-			ruleType: "city_tag", ruleValue: "coastal",
-			stats: UserStats{CheckinTagAny: map[string]bool{"coastal": true}}, want: true,
+			ruleType: "city_tag", ruleValue: "沿海",
+			stats: UserStats{VisitedTagAny: map[string]bool{"沿海": true}}, want: true,
 		},
 		{
 			name:     "city_tag missing",
-			ruleType: "city_tag", ruleValue: "desert",
-			stats: UserStats{CheckinTagAny: map[string]bool{"coastal": true}}, want: false,
+			ruleType: "city_tag", ruleValue: "大漠",
+			stats: UserStats{VisitedTagAny: map[string]bool{"沿海": true}}, want: false,
 		},
 		{
 			name:     "tag_count reached",
-			ruleType: "tag_count", ruleValue: "spicy_food:3",
-			stats: UserStats{CheckinCityTags: map[string]int{"spicy_food": 3}}, want: true,
+			ruleType: "tag_count", ruleValue: "美食:3",
+			stats: UserStats{VisitedCityTags: map[string]int{"美食": 3}}, want: true,
 		},
 		{
 			name:     "tag_count not reached",
-			ruleType: "tag_count", ruleValue: "spicy_food:3",
-			stats: UserStats{CheckinCityTags: map[string]int{"spicy_food": 2}}, want: false,
+			ruleType: "tag_count", ruleValue: "美食:3",
+			stats: UserStats{VisitedCityTags: map[string]int{"美食": 2}}, want: false,
 		},
 		{
 			name:     "tag_count malformed",
-			ruleType: "tag_count", ruleValue: "spicy_food",
-			stats: UserStats{CheckinCityTags: map[string]int{"spicy_food": 9}}, want: false,
+			ruleType: "tag_count", ruleValue: "美食",
+			stats: UserStats{VisitedCityTags: map[string]int{"美食": 9}}, want: false,
 		},
 		{
 			name:     "tag_count non-numeric",
-			ruleType: "tag_count", ruleValue: "spicy_food:x",
-			stats: UserStats{CheckinCityTags: map[string]int{"spicy_food": 9}}, want: false,
+			ruleType: "tag_count", ruleValue: "美食:x",
+			stats: UserStats{VisitedCityTags: map[string]int{"美食": 9}}, want: false,
+		},
+		{
+			name:     "visit_count reached",
+			ruleType: "visit_count", ruleValue: "5", stats: UserStats{VisitedCityCount: 5}, want: true,
+		},
+		{
+			name:     "visit_count not reached",
+			ruleType: "visit_count", ruleValue: "5", stats: UserStats{VisitedCityCount: 4}, want: false,
 		},
 		{
 			name:     "game_visit_count reached",

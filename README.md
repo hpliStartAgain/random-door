@@ -51,6 +51,7 @@ make seed
 | `make seed-audit` | 只读盘点真实库与 seed 的差异 |
 | `make seed` | 显式补齐缺失 seed 行，不覆盖后台已有内容 |
 | `make seed-sync` | 谨慎：按 seed 覆盖自然键匹配行 |
+| `make seed-landmark-coords` | 仅回填缺失的地标经纬度 |
 | `make logs` | 查看后端日志 |
 | `make lint` / `make test` | 检查 / 测试 |
 

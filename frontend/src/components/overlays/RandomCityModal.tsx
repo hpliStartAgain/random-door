@@ -6,6 +6,8 @@ import { useUserStore } from '../../store/useUserStore';
 import { useMapStore } from '../../store/useMapStore';
 import { useCityStore } from '../../store/useCityStore';
 import { foxImages } from '../../assets/foxImages';
+import { AchievementUnlock } from './AchievementUnlock';
+import type { Achievement } from './AchievementUnlock';
 
 type VisualPhase = 'idle' | 'loading' | 'revealing' | 'result' | 'flying';
 
@@ -40,6 +42,7 @@ export const RandomCityModal: React.FC = () => {
 
   const [showResult, setShowResult] = useState(false);
   const [flashCities, setFlashCities] = useState<typeof cities>([]);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
 
   useEffect(() => {
     if (!userId || nearestCity) return;
@@ -75,7 +78,10 @@ export const RandomCityModal: React.FC = () => {
     setFromPoint({ lat, lng });
     setRollPhase('rolling');
     try {
-      await roll(userId, nearestCity?.id || 1, lat, lng);
+      const result = await roll(userId, nearestCity?.id || 1, lat, lng);
+      if (result.unlocked_achievements?.length) {
+        setUnlockedAchievements(result.unlocked_achievements);
+      }
       setRollPhase('revealing');
     } catch (e) {
       console.error(e);
@@ -135,6 +141,12 @@ export const RandomCityModal: React.FC = () => {
         .reveal-in { animation: revealSlide 0.45s ease-out both; }
         .city-in   { animation: cityReveal 0.7s ease-out 0.15s both; }
       `}</style>
+      {unlockedAchievements.length > 0 && (
+        <AchievementUnlock
+          achievements={unlockedAchievements}
+          onClose={() => setUnlockedAchievements([])}
+        />
+      )}
 
       {/* Backdrop blur overlay */}
       <div

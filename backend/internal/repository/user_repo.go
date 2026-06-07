@@ -24,6 +24,15 @@ func (r *UserRepo) FindByAnonymousID(ctx context.Context, anonymousID string) (*
 	return &user, nil
 }
 
+func (r *UserRepo) FindByUsername(ctx context.Context, username string) (*model.User, error) {
+	var user model.User
+	err := r.DB.WithContext(ctx).Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepo) FindByID(ctx context.Context, id int64) (*model.User, error) {
 	var user model.User
 	err := r.DB.WithContext(ctx).First(&user, id).Error
@@ -43,6 +52,13 @@ func (r *UserRepo) UpdateCurrentCity(ctx context.Context, userID, cityID int64) 
 }
 
 func (r *UserRepo) UpdateProfile(ctx context.Context, userID int64, fields map[string]any) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	return r.DB.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Updates(fields).Error
+}
+
+func (r *UserRepo) UpdateAccount(ctx context.Context, userID int64, fields map[string]any) error {
 	if len(fields) == 0 {
 		return nil
 	}

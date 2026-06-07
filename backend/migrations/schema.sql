@@ -7,6 +7,8 @@ SET NAMES utf8mb4;
 CREATE TABLE IF NOT EXISTS users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   anonymous_id VARCHAR(128) NOT NULL,
+  username VARCHAR(64),
+  password_hash VARCHAR(255),
   nickname VARCHAR(64),
   avatar_url VARCHAR(512),
   age INT,
@@ -15,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   UNIQUE KEY uk_anonymous_id (anonymous_id),
+  UNIQUE KEY uk_user_username (username),
   KEY idx_user_current_city (current_city_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -47,6 +50,8 @@ CREATE TABLE IF NOT EXISTS landmarks (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   city_id BIGINT NOT NULL,
   name VARCHAR(128) NOT NULL,
+  lat DOUBLE,
+  lng DOUBLE,
   image_url VARCHAR(512),
   description TEXT,
   soundscape_url VARCHAR(512),

@@ -8,6 +8,8 @@ import { useMapStore } from '../../store/useMapStore';
 import { useUserStore } from '../../store/useUserStore';
 import { useViewStore } from '../../store/useViewStore';
 import { CityDetailPanel } from '../CityDetailPanel';
+import { AchievementUnlock } from '../overlays/AchievementUnlock';
+import type { Achievement } from '../overlays/AchievementUnlock';
 import { getRegionOptions, getAllTags } from '../../lib/cityFilters';
 
 function SidebarFoxDoor() {
@@ -25,6 +27,7 @@ export const Sidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'explore' | 'dice'>('explore');
   const [selectedCity, setSelectedCity] = useState<any | null>(null);
   const [selectedVisitId, setSelectedVisitId] = useState<number | undefined>(undefined);
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
   
   const {
     cities,
@@ -52,6 +55,9 @@ export const Sidebar: React.FC = () => {
   useEffect(() => {
     if (currentView !== 'CITY_DETAIL' || !activeCityId) return;
     let cancelled = false;
+    setSelectedCity((prev: any | null) => (
+      prev?.id === activeCityId ? prev : cities.find((city) => city.id === activeCityId) ?? null
+    ));
     loadCity(activeCityId)
       .then((detail) => {
         if (cancelled) return;
@@ -65,7 +71,7 @@ export const Sidebar: React.FC = () => {
       })
       .catch(console.error);
     return () => { cancelled = true; };
-  }, [currentView, activeCityId, lastRoll?.target_city.id, lastRoll?.visit_id, loadCity, setCurrentCityId]);
+  }, [currentView, activeCityId, cities, lastRoll?.target_city.id, lastRoll?.visit_id, loadCity, setCurrentCityId]);
 
   useEffect(() => {
     if (currentView !== 'CITY_DETAIL' || !activeCityId) return;
@@ -91,6 +97,9 @@ export const Sidebar: React.FC = () => {
       if (userId) {
         const visit = await api.createFreeVisit(userId, city.id);
         setSelectedVisitId(visit.visit_id);
+        if (visit.unlocked_achievements?.length) {
+          setUnlockedAchievements(visit.unlocked_achievements);
+        }
       }
       const detail = await loadCity(city.id);
       setSelectedCity(detail);
@@ -112,6 +121,12 @@ export const Sidebar: React.FC = () => {
     <aside className="w-[380px] h-full sidebar-container flex flex-col z-20 overflow-hidden relative border-r border-border/50 shadow-sm shrink-0 bg-background">
       {/* 城市详情面板（通过绝对定位覆盖在上方，滑动出入） */}
       <CityDetailPanel city={selectedCity} visitId={selectedVisitId} onBack={closeCityDetail} />
+      {unlockedAchievements.length > 0 && (
+        <AchievementUnlock
+          achievements={unlockedAchievements}
+          onClose={() => setUnlockedAchievements([])}
+        />
+      )}
       
       {/* 头部标题区 */}
       <div className="p-6 pb-2">

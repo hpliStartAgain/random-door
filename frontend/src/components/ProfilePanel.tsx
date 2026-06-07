@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Pencil, X } from 'lucide-react';
+import { Check, LogIn, LogOut, Pencil, UserPlus, X } from 'lucide-react';
 import { api } from '../api';
 import { useUserStore } from '../store/useUserStore';
 import { useViewStore } from '../store/useViewStore';
@@ -9,7 +9,7 @@ import { ProfilePosterGrid } from './ProfilePosterGrid';
 
 export const ProfilePanel: React.FC = () => {
   const { profileOpen, setProfileOpen } = useViewStore();
-  const { userId } = useUserStore();
+  const { userId, username, register, login, logout } = useUserStore();
   const [data, setData] = useState<UserAssetsResponse | null>(null);
   const [profile, setProfile] = useState<UserProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,6 +20,11 @@ export const ProfilePanel: React.FC = () => {
   const [age, setAge] = useState('');
   const [homeRegion, setHomeRegion] = useState('');
   const [error, setError] = useState('');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authUsername, setAuthUsername] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authNickname, setAuthNickname] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
     if (!profileOpen || !userId) return;
@@ -38,7 +43,7 @@ export const ProfilePanel: React.FC = () => {
         setError('资料加载失败');
       })
       .finally(() => setLoading(false));
-  }, [profileOpen, userId]);
+  }, [profileOpen, userId, username]);
 
   const handleSaveProfile = async () => {
     if (!userId || saving) return;
@@ -57,6 +62,33 @@ export const ProfilePanel: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAuth = async () => {
+    if (authLoading) return;
+    setAuthLoading(true);
+    setError('');
+    try {
+      if (authMode === 'login') {
+        await login(authUsername.trim(), authPassword);
+      } else {
+        await register(authUsername.trim(), authPassword, authNickname.trim());
+      }
+      setAuthPassword('');
+      setAuthUsername('');
+      setAuthNickname('');
+    } catch (e: any) {
+      setError(e?.message || '账号处理失败');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setError('');
+    await logout();
+    setData(null);
+    setProfile(null);
   };
 
   return (
@@ -79,7 +111,7 @@ export const ProfilePanel: React.FC = () => {
                 <img src="/icon-transparent.png" alt="我" className="w-8 h-8 object-contain" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-foreground">{profile?.nickname || '未设置昵称'}</h3>
+                <h3 className="font-bold text-base text-foreground">{profile?.nickname || username || '未设置昵称'}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {data ? `走过 ${data.visited_cities.length} 座城市` : '加载中...'}
                 </p>
@@ -93,7 +125,73 @@ export const ProfilePanel: React.FC = () => {
             </button>
           </div>
 
-          <div className="mt-4 rounded-xl border border-border/60 bg-background/70 p-3 space-y-2">
+          <div className="mt-4 rounded-xl border border-border/60 bg-background/70 p-3 space-y-3">
+            <div>
+              {username ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-muted-foreground">当前账号</div>
+                    <div className="text-sm font-bold truncate mt-0.5">{username}</div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="h-8 px-3 rounded-lg border border-border text-xs font-semibold hover:bg-secondary flex items-center gap-1.5 shrink-0"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    退出
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1">
+                    <button
+                      onClick={() => setAuthMode('login')}
+                      className={`h-8 rounded-md text-xs font-semibold flex items-center justify-center gap-1 ${authMode === 'login' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      登录
+                    </button>
+                    <button
+                      onClick={() => setAuthMode('register')}
+                      className={`h-8 rounded-md text-xs font-semibold flex items-center justify-center gap-1 ${authMode === 'register' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      注册
+                    </button>
+                  </div>
+                  <input
+                    value={authUsername}
+                    onChange={(e) => setAuthUsername(e.target.value)}
+                    placeholder="账号"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-xs outline-none focus:border-primary/50"
+                  />
+                  <input
+                    type="password"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+                    placeholder="密码"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-xs outline-none focus:border-primary/50"
+                  />
+                  {authMode === 'register' && (
+                    <input
+                      value={authNickname}
+                      onChange={(e) => setAuthNickname(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+                      placeholder="昵称"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-card text-xs outline-none focus:border-primary/50"
+                    />
+                  )}
+                  <button
+                    onClick={handleAuth}
+                    disabled={!authUsername.trim() || !authPassword || authLoading}
+                    className="w-full h-9 rounded-lg bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50"
+                  >
+                    {authLoading ? '处理中…' : authMode === 'login' ? '登录' : '注册'}
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center justify-between">
               <div className="text-xs font-semibold text-muted-foreground">个人资料</div>
               <button

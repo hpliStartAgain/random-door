@@ -5,8 +5,13 @@ import { api } from '../api';
 interface UserState {
   userId: number | null;
   anonymousId: string | null;
+  username: string | null;
+  nickname: string | null;
   currentCityId: number | null;
   initUser: () => Promise<void>;
+  register: (username: string, password: string, nickname?: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   setCurrentCityId: (cityId: number | null) => void;
 }
 
@@ -28,6 +33,8 @@ export const useUserStore = create<UserState>()(
     (set, get) => ({
       userId: null,
       anonymousId: null,
+      username: null,
+      nickname: null,
       currentCityId: null,
       setCurrentCityId: (cityId) => set({ currentCityId: cityId }),
       initUser: async () => {
@@ -41,6 +48,41 @@ export const useUserStore = create<UserState>()(
           set({ userId: res.user_id, currentCityId: res.current_city_id ?? get().currentCityId });
         } catch (error) {
           console.error('Failed to init user:', error);
+        }
+      },
+      register: async (username, password, nickname) => {
+        const res = await api.register({
+          user_id: get().userId,
+          username,
+          password,
+          nickname: nickname?.trim() || undefined,
+        });
+        set({
+          userId: res.user_id,
+          anonymousId: res.anonymous_id,
+          username: res.username,
+          nickname: res.nickname ?? null,
+          currentCityId: res.current_city_id ?? null,
+        });
+      },
+      login: async (username, password) => {
+        const res = await api.login({ username, password });
+        set({
+          userId: res.user_id,
+          anonymousId: res.anonymous_id,
+          username: res.username,
+          nickname: res.nickname ?? null,
+          currentCityId: res.current_city_id ?? null,
+        });
+      },
+      logout: async () => {
+        const anonId = generateUUID();
+        set({ userId: null, anonymousId: anonId, username: null, nickname: null, currentCityId: null });
+        try {
+          const res = await api.createAnonymousUser(anonId);
+          set({ userId: res.user_id, currentCityId: res.current_city_id ?? null });
+        } catch (error) {
+          console.error('Failed to init anonymous user after logout:', error);
         }
       },
     }),

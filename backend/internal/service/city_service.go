@@ -29,16 +29,24 @@ func NewCityService(cityRepo CityRepository) *CityService {
 
 // CityListItem is a lightweight city representation for the list endpoint.
 type CityListItem struct {
-	ID             int64    `json:"id"`
-	Name           string   `json:"name"`
-	Province       string   `json:"province"`
-	Lat            float64  `json:"lat"`
-	Lng            float64  `json:"lng"`
-	CoverImageURL  *string  `json:"cover_image_url,omitempty"`
-	Tags           []string `json:"tags"`
-	LandmarkCount  int      `json:"landmark_count"`
-	FoodCount      int      `json:"food_count"`
-	CharacterCount int      `json:"character_count"`
+	ID             int64             `json:"id"`
+	Name           string            `json:"name"`
+	Province       string            `json:"province"`
+	Lat            float64           `json:"lat"`
+	Lng            float64           `json:"lng"`
+	CoverImageURL  *string           `json:"cover_image_url,omitempty"`
+	Tags           []string          `json:"tags"`
+	Landmarks      []LandmarkMapItem `json:"landmarks,omitempty"`
+	LandmarkCount  int               `json:"landmark_count"`
+	FoodCount      int               `json:"food_count"`
+	CharacterCount int               `json:"character_count"`
+}
+
+type LandmarkMapItem struct {
+	ID   int64    `json:"id"`
+	Name string   `json:"name"`
+	Lat  *float64 `json:"lat,omitempty"`
+	Lng  *float64 `json:"lng,omitempty"`
 }
 
 // CityDetail is the full city response with related entities.
@@ -59,11 +67,13 @@ type CityDetail struct {
 }
 
 type LandmarkItem struct {
-	ID            int64   `json:"id"`
-	Name          string  `json:"name"`
-	ImageURL      *string `json:"image_url,omitempty"`
-	Description   *string `json:"description,omitempty"`
-	SoundscapeURL *string `json:"soundscape_url,omitempty"`
+	ID            int64    `json:"id"`
+	Name          string   `json:"name"`
+	Lat           *float64 `json:"lat,omitempty"`
+	Lng           *float64 `json:"lng,omitempty"`
+	ImageURL      *string  `json:"image_url,omitempty"`
+	Description   *string  `json:"description,omitempty"`
+	SoundscapeURL *string  `json:"soundscape_url,omitempty"`
 }
 
 type FoodItem struct {
@@ -105,6 +115,16 @@ func (s *CityService) List(ctx context.Context) ([]CityListItem, error) {
 		for _, t := range tags {
 			tagNames = append(tagNames, t.Tag)
 		}
+		landmarks, err := s.cityRepo.ListLandmarks(ctx, c.ID)
+		if err != nil {
+			return nil, fmt.Errorf("list landmarks for city %d: %w", c.ID, err)
+		}
+		landmarkItems := make([]LandmarkMapItem, 0, len(landmarks))
+		for _, lm := range landmarks {
+			landmarkItems = append(landmarkItems, LandmarkMapItem{
+				ID: lm.ID, Name: lm.Name, Lat: lm.Lat, Lng: lm.Lng,
+			})
+		}
 		cnt := counts[c.ID]
 		result = append(result, CityListItem{
 			ID:             c.ID,
@@ -114,6 +134,7 @@ func (s *CityService) List(ctx context.Context) ([]CityListItem, error) {
 			Lng:            c.Lng,
 			CoverImageURL:  c.CoverImageURL,
 			Tags:           tagNames,
+			Landmarks:      landmarkItems,
 			LandmarkCount:  cnt.LandmarkCount,
 			FoodCount:      cnt.FoodCount,
 			CharacterCount: cnt.CharacterCount,
@@ -151,7 +172,8 @@ func (s *CityService) Detail(ctx context.Context, cityID int64) (*CityDetail, er
 	lms := make([]LandmarkItem, 0, len(landmarks))
 	for _, l := range landmarks {
 		lms = append(lms, LandmarkItem{
-			ID: l.ID, Name: l.Name, ImageURL: l.ImageURL, Description: l.Description, SoundscapeURL: l.SoundscapeURL,
+			ID: l.ID, Name: l.Name, Lat: l.Lat, Lng: l.Lng,
+			ImageURL: l.ImageURL, Description: l.Description, SoundscapeURL: l.SoundscapeURL,
 		})
 	}
 

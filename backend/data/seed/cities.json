@@ -9,18 +9,22 @@
     "dialect_sample": "您内位",
     "dialect_explanation": "北京话敬称，意为'您这位'。",
     "tags": [
-      "ancient_capital",
-      "north_china"
+      "古都",
+      "华北"
     ],
     "landmarks": [
       {
         "name": "故宫",
+        "lat": 39.9163,
+        "lng": 116.3972,
         "image_url": "/static/landmarks/beijing_landmark_1.png",
         "description": "明清皇家宫殿，世界现存最大木结构宫殿群。",
         "soundscape_url": "/static/soundscapes/beijing_forbidden_city.wav"
       },
       {
         "name": "长城（八达岭）",
+        "lat": 40.3563,
+        "lng": 116.0201,
         "image_url": "/static/landmarks/beijing_landmark_2.png",
         "description": "雄踞燕山，万里长城代表段落。"
       }
@@ -61,19 +65,23 @@
     "dialect_sample": "嘹咋咧",
     "dialect_explanation": "关中方言，表示很好、很棒。",
     "tags": [
-      "ancient_capital",
-      "northwest",
-      "spicy_food"
+      "古都",
+      "西北",
+      "美食"
     ],
     "landmarks": [
       {
         "name": "兵马俑",
+        "lat": 34.3844,
+        "lng": 109.2785,
         "image_url": "/static/landmarks/xian_landmark_1.png",
         "description": "秦始皇陵陪葬坑，世界第八大奇迹。",
         "soundscape_url": "/static/soundscapes/xian_bingmayong.wav"
       },
       {
         "name": "西安城墙",
+        "lat": 34.2658,
+        "lng": 108.9566,
         "image_url": "/static/landmarks/xian_landmark_2.png",
         "description": "现存最完整的古城墙，可登城骑行。"
       }
@@ -114,18 +122,22 @@
     "dialect_sample": "多大事啊",
     "dialect_explanation": "南京话，表示'没什么大不了的'。",
     "tags": [
-      "ancient_capital",
-      "jiangnan"
+      "古都",
+      "江南"
     ],
     "landmarks": [
       {
         "name": "中山陵",
+        "lat": 32.0617,
+        "lng": 118.8481,
         "image_url": "/static/landmarks/nanjing_landmark_1.png",
         "description": "孙中山先生陵墓，依紫金山而建。",
         "soundscape_url": "/static/soundscapes/nanjing_zhongshanling.wav"
       },
       {
         "name": "夫子庙",
+        "lat": 32.0206,
+        "lng": 118.7883,
         "image_url": "/static/landmarks/nanjing_landmark_2.png",
         "description": "秦淮河畔文化地标，夜景璀璨。"
       }
@@ -166,18 +178,22 @@
     "dialect_sample": "来哇",
     "dialect_explanation": "杭州话，表示'来啊/来吧'。",
     "tags": [
-      "jiangnan",
-      "wuyue"
+      "江南",
+      "吴越"
     ],
     "landmarks": [
       {
         "name": "西湖",
+        "lat": 30.2426,
+        "lng": 120.15,
         "image_url": "/static/landmarks/hangzhou_landmark_1.png",
         "description": "世界文化遗产，三面环山一面城。",
         "soundscape_url": "/static/soundscapes/hangzhou_west_lake.wav"
       },
       {
         "name": "灵隐寺",
+        "lat": 30.2401,
+        "lng": 120.1023,
         "image_url": "/static/landmarks/hangzhou_landmark_2.png",
         "description": "江南名刹，飞来峰石刻精美。"
       }
@@ -218,18 +234,22 @@
     "dialect_sample": "巴适得板",
     "dialect_explanation": "四川话，表示非常好、非常舒服。",
     "tags": [
-      "spicy_food",
-      "modern_city"
+      "美食",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "武侯祠",
+        "lat": 30.6424,
+        "lng": 104.0472,
         "image_url": "/static/landmarks/chengdu_landmark_1.png",
         "description": "纪念诸葛亮的祠堂，三国文化圣地。",
         "soundscape_url": "/static/soundscapes/chengdu_wuhouci.wav"
       },
       {
         "name": "宽窄巷子",
+        "lat": 30.6694,
+        "lng": 104.0596,
         "image_url": "/static/landmarks/chengdu_landmark_2.png",
         "description": "清代老街，成都慢生活缩影。"
       }
@@ -270,18 +290,22 @@
     "dialect_sample": "饮咗茶未",
     "dialect_explanation": "粤语，意思是'喝过早茶了吗'。",
     "tags": [
-      "lingnan",
-      "coastal",
-      "modern_city"
+      "岭南",
+      "沿海",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "广州塔",
+        "lat": 23.1067,
+        "lng": 113.3245,
         "image_url": "/static/landmarks/guangzhou_landmark_1.png",
         "description": "小蛮腰，600米地标，珠江夜景尽收眼底。"
       },
       {
         "name": "陈家祠",
+        "lat": 23.1291,
+        "lng": 113.2563,
         "image_url": "/static/landmarks/guangzhou_landmark_2.png",
         "description": "岭南建筑艺术瑰宝，精美木雕砖雕。"
       }
@@ -322,17 +346,21 @@
     "dialect_sample": "嘎嘎好",
     "dialect_explanation": "东北话，表示'特别好'。",
     "tags": [
-      "dongbei",
-      "north_china"
+      "东北",
+      "华北"
     ],
     "landmarks": [
       {
         "name": "圣索菲亚教堂",
+        "lat": 45.7698,
+        "lng": 126.6242,
         "image_url": "/static/landmarks/haerbin_landmark_1.png",
         "description": "拜占庭式建筑，哈尔滨标志性地标。"
       },
       {
         "name": "冰雪大世界",
+        "lat": 45.8177,
+        "lng": 126.5689,
         "image_url": "/static/landmarks/haerbin_landmark_2.png",
         "description": "全球最大冰雪主题乐园。"
       }
@@ -373,17 +401,21 @@
     "dialect_sample": "阿要辣油啊",
     "dialect_explanation": "苏州话，卖馄饨的吆喝'要不要加辣油啊'。",
     "tags": [
-      "jiangnan",
-      "wuyue"
+      "江南",
+      "吴越"
     ],
     "landmarks": [
       {
         "name": "拙政园",
+        "lat": 31.3245,
+        "lng": 120.6297,
         "image_url": "/static/landmarks/suzhou_landmark_1.png",
         "description": "中国四大名园之一，典雅秀丽。"
       },
       {
         "name": "虎丘",
+        "lat": 31.3389,
+        "lng": 120.5763,
         "image_url": "/static/landmarks/suzhou_landmark_2.png",
         "description": "吴中第一名胜，云岩寺塔斜而不倒。"
       }
@@ -424,17 +456,21 @@
     "dialect_sample": "板扎",
     "dialect_explanation": "云南话，表示'很好、很棒'。",
     "tags": [
-      "southwest",
-      "bai_culture"
+      "西南",
+      "白族文化"
     ],
     "landmarks": [
       {
         "name": "洱海",
+        "lat": 25.8001,
+        "lng": 100.1905,
         "image_url": "/static/landmarks/dali_landmark_1.png",
         "description": "高原明珠，苍山下碧波万顷。"
       },
       {
         "name": "大理古城",
+        "lat": 25.692,
+        "lng": 100.1617,
         "image_url": "/static/landmarks/dali_landmark_2.png",
         "description": "白族建筑风情，五华楼巍峨。"
       }
@@ -475,17 +511,21 @@
     "dialect_sample": "呷饱未",
     "dialect_explanation": "闽南语，意思是'吃饱了吗'。",
     "tags": [
-      "coastal",
-      "minnan"
+      "沿海",
+      "闽南"
     ],
     "landmarks": [
       {
         "name": "鼓浪屿",
+        "lat": 24.4483,
+        "lng": 118.0665,
         "image_url": "/static/landmarks/xiamen_landmark_1.png",
         "description": "世界文化遗产，钢琴之岛。"
       },
       {
         "name": "南普陀寺",
+        "lat": 24.4384,
+        "lng": 118.101,
         "image_url": "/static/landmarks/xiamen_landmark_2.png",
         "description": "千年古刹，闽南佛教圣地。"
       }
@@ -526,17 +566,21 @@
     "dialect_sample": "恰饭克",
     "dialect_explanation": "长沙话，意思是'去吃饭'。",
     "tags": [
-      "spicy_food",
-      "modern_city"
+      "美食",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "岳麓山",
+        "lat": 28.185,
+        "lng": 112.944,
         "image_url": "/static/landmarks/changsha_landmark_1.png",
         "description": "千年学府岳麓书院所在，枫叶红遍。"
       },
       {
         "name": "橘子洲",
+        "lat": 28.1881,
+        "lng": 112.9764,
         "image_url": "/static/landmarks/changsha_landmark_2.png",
         "description": "湘江中的绿洲，青年毛泽东雕塑矗立。"
       }
@@ -577,16 +621,20 @@
     "dialect_sample": "扎西德勒",
     "dialect_explanation": "藏语，表示'吉祥如意'。",
     "tags": [
-      "northwest"
+      "西北"
     ],
     "landmarks": [
       {
         "name": "布达拉宫",
+        "lat": 29.6578,
+        "lng": 91.1169,
         "image_url": "/static/landmarks/lasa_landmark_1.png",
         "description": "世界文化遗产，藏传佛教圣殿。"
       },
       {
         "name": "大昭寺",
+        "lat": 29.65,
+        "lng": 91.1327,
         "image_url": "/static/landmarks/lasa_landmark_2.png",
         "description": "藏传佛教信仰中心，八廓街环绕。"
       }
@@ -627,18 +675,22 @@
     "dialect_sample": "侬好",
     "dialect_explanation": "上海话，意思是“你好”。",
     "tags": [
-      "modern_city",
-      "jiangnan",
-      "coastal"
+      "现代都市",
+      "江南",
+      "沿海"
     ],
     "landmarks": [
       {
         "name": "外滩",
+        "lat": 31.2397,
+        "lng": 121.4903,
         "image_url": "/static/landmarks/shanghai_landmark_1.png",
         "description": "万国建筑群临江展开，是观察上海近代城市史的经典地标。"
       },
       {
         "name": "豫园",
+        "lat": 31.2272,
+        "lng": 121.4922,
         "image_url": "/static/landmarks/shanghai_landmark_2.png",
         "description": "明代园林与城隍庙商圈相邻，呈现海派市井与江南园林气质。"
       }
@@ -679,18 +731,22 @@
     "dialect_sample": "要得",
     "dialect_explanation": "重庆话，表示可以、没问题。",
     "tags": [
-      "spicy_food",
-      "southwest",
-      "modern_city"
+      "美食",
+      "西南",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "洪崖洞",
+        "lat": 29.5621,
+        "lng": 106.5835,
         "image_url": "/static/landmarks/chongqing_landmark_1.png",
         "description": "依山临江的吊脚楼风貌街区，夜景层次鲜明。"
       },
       {
         "name": "磁器口古镇",
+        "lat": 29.5789,
+        "lng": 106.4513,
         "image_url": "/static/landmarks/chongqing_landmark_2.png",
         "description": "嘉陵江畔古镇，保留巴渝市井和码头记忆。"
       }
@@ -731,18 +787,22 @@
     "dialect_sample": "过早",
     "dialect_explanation": "武汉话，指吃早饭，也是一种热闹的城市生活方式。",
     "tags": [
-      "river_city",
-      "central_china",
-      "modern_city"
+      "江河城市",
+      "中原",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "黄鹤楼",
+        "lat": 30.5443,
+        "lng": 114.2974,
         "image_url": "/static/landmarks/wuhan_landmark_1.png",
         "description": "长江边的文化名楼，承载诗文想象与城市地标意义。"
       },
       {
         "name": "东湖",
+        "lat": 30.5585,
+        "lng": 114.4012,
         "image_url": "/static/landmarks/wuhan_landmark_2.png",
         "description": "城中大湖，绿道、水岸与高校片区相连。"
       }
@@ -783,18 +843,22 @@
     "dialect_sample": "嘛玩意儿",
     "dialect_explanation": "天津话，表示“什么东西/怎么回事”，语气常带幽默感。",
     "tags": [
-      "north_china",
-      "coastal",
-      "modern_city"
+      "华北",
+      "沿海",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "五大道",
+        "lat": 39.1107,
+        "lng": 117.2021,
         "image_url": "/static/landmarks/tianjin_landmark_1.png",
         "description": "近代风貌建筑集中区，街区尺度适合慢慢步行观察。"
       },
       {
         "name": "天津之眼",
+        "lat": 39.1537,
+        "lng": 117.1808,
         "image_url": "/static/landmarks/tianjin_landmark_2.png",
         "description": "跨河摩天轮，是海河夜景中的醒目标识。"
       }
@@ -835,18 +899,22 @@
     "dialect_sample": "哈啤酒",
     "dialect_explanation": "青岛口语，意思是喝啤酒。",
     "tags": [
-      "coastal",
-      "north_china",
-      "modern_city"
+      "沿海",
+      "华北",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "栈桥",
+        "lat": 36.0634,
+        "lng": 120.3266,
         "image_url": "/static/landmarks/qingdao_landmark_1.png",
         "description": "伸入海湾的老地标，可远望红瓦城区与海岸线。"
       },
       {
         "name": "八大关",
+        "lat": 36.052,
+        "lng": 120.3542,
         "image_url": "/static/landmarks/qingdao_landmark_2.png",
         "description": "花木街巷与多国风格建筑构成青岛经典步行区域。"
       }
@@ -887,18 +955,22 @@
     "dialect_sample": "杠赛来",
     "dialect_explanation": "济南话，表示非常好、很厉害。",
     "tags": [
-      "north_china",
-      "spring_city",
-      "food_city"
+      "华北",
+      "泉城",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "趵突泉",
+        "lat": 36.6612,
+        "lng": 117.0143,
         "image_url": "/static/landmarks/jinan_landmark_1.png",
         "description": "济南名泉代表，泉水涌动是城市最鲜明的视觉记忆。"
       },
       {
         "name": "大明湖",
+        "lat": 36.6753,
+        "lng": 117.0254,
         "image_url": "/static/landmarks/jinan_landmark_2.png",
         "description": "湖城相依的老城水景，连接泉水文化与市民生活。"
       }
@@ -939,18 +1011,22 @@
     "dialect_sample": "中不中",
     "dialect_explanation": "河南话，意思是行不行、可以吗。",
     "tags": [
-      "central_china",
-      "ancient_capital",
-      "modern_city"
+      "中原",
+      "古都",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "河南博物院",
+        "lat": 34.7918,
+        "lng": 113.6816,
         "image_url": "/static/landmarks/zhengzhou_landmark_1.png",
         "description": "展示中原文明脉络，是理解河南历史的高密度入口。"
       },
       {
         "name": "二七纪念塔",
+        "lat": 34.7545,
+        "lng": 113.6656,
         "image_url": "/static/landmarks/zhengzhou_landmark_2.png",
         "description": "郑州城市中心地标，记录近代铁路工人运动记忆。"
       }
@@ -991,17 +1067,21 @@
     "dialect_sample": "真得劲",
     "dialect_explanation": "河南话，表示很舒服、很有味道。",
     "tags": [
-      "ancient_capital",
-      "central_china"
+      "古都",
+      "中原"
     ],
     "landmarks": [
       {
         "name": "龙门石窟",
+        "lat": 34.559,
+        "lng": 112.4781,
         "image_url": "/static/landmarks/luoyang_landmark_1.png",
         "description": "世界文化遗产，石刻造像展现北魏至唐代艺术高峰。"
       },
       {
         "name": "白马寺",
+        "lat": 34.7212,
+        "lng": 112.6039,
         "image_url": "/static/landmarks/luoyang_landmark_2.png",
         "description": "中国佛教重要古寺，承载早期佛教传播记忆。"
       }
@@ -1042,18 +1122,22 @@
     "dialect_sample": "可美",
     "dialect_explanation": "河南话，表示很好、很舒服。",
     "tags": [
-      "ancient_capital",
-      "central_china",
-      "food_city"
+      "古都",
+      "中原",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "清明上河园",
+        "lat": 34.8102,
+        "lng": 114.3309,
         "image_url": "/static/landmarks/kaifeng_landmark_1.png",
         "description": "以宋代市井图景为主题的园区，适合演示汴梁文化。"
       },
       {
         "name": "龙亭",
+        "lat": 34.8122,
+        "lng": 114.3482,
         "image_url": "/static/landmarks/kaifeng_landmark_2.png",
         "description": "开封老城轴线上的历史地标，可看湖景与古都轮廓。"
       }
@@ -1094,18 +1178,22 @@
     "dialect_sample": "搞得好",
     "dialect_explanation": "合肥口语，表示做得不错、挺好。",
     "tags": [
-      "jianghuai",
-      "modern_city",
-      "food_city"
+      "江淮",
+      "现代都市",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "逍遥津公园",
+        "lat": 31.8691,
+        "lng": 117.299,
         "image_url": "/static/landmarks/hefei_landmark_1.png",
         "description": "三国故事与城市公园结合，是合肥老城记忆之一。"
       },
       {
         "name": "巢湖",
+        "lat": 31.5986,
+        "lng": 117.8667,
         "image_url": "/static/landmarks/hefei_landmark_2.png",
         "description": "中国五大淡水湖之一，湖岸风光构成城市外延景观。"
       }
@@ -1146,18 +1234,22 @@
     "dialect_sample": "虾油味",
     "dialect_explanation": "福州饮食口语，常形容带有本地调味风格的鲜咸味。",
     "tags": [
-      "coastal",
-      "minnan",
-      "food_city"
+      "沿海",
+      "闽南",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "三坊七巷",
+        "lat": 26.0824,
+        "lng": 119.2964,
         "image_url": "/static/landmarks/fuzhou_landmark_1.png",
         "description": "福州古城核心街区，保留坊巷格局与名人故居。"
       },
       {
         "name": "鼓山",
+        "lat": 26.049,
+        "lng": 119.3886,
         "image_url": "/static/landmarks/fuzhou_landmark_2.png",
         "description": "临江名山，登高可看城市与闽江景致。"
       }
@@ -1198,18 +1290,22 @@
     "dialect_sample": "爱拼才会赢",
     "dialect_explanation": "闽南语流行表达，意思是努力拼搏才有机会成功。",
     "tags": [
-      "coastal",
-      "minnan",
-      "heritage"
+      "沿海",
+      "闽南",
+      "文化遗产"
     ],
     "landmarks": [
       {
         "name": "开元寺",
+        "lat": 24.9133,
+        "lng": 118.5848,
         "image_url": "/static/landmarks/quanzhou_landmark_1.png",
         "description": "泉州古刹，东西塔是城市天际线的重要标志。"
       },
       {
         "name": "洛阳桥",
+        "lat": 24.9536,
+        "lng": 118.6718,
         "image_url": "/static/landmarks/quanzhou_landmark_2.png",
         "description": "中国古代海港桥梁代表，体现宋代工程智慧。"
       }
@@ -1250,18 +1346,22 @@
     "dialect_sample": "搞掂",
     "dialect_explanation": "粤语常用语，表示搞定、解决了。",
     "tags": [
-      "modern_city",
-      "coastal",
-      "lingnan"
+      "现代都市",
+      "沿海",
+      "岭南"
     ],
     "landmarks": [
       {
         "name": "莲花山公园",
+        "lat": 22.5538,
+        "lng": 114.0648,
         "image_url": "/static/landmarks/shenzhen_landmark_1.png",
         "description": "城市中心绿地，可俯瞰福田天际线。"
       },
       {
         "name": "大鹏所城",
+        "lat": 22.5964,
+        "lng": 114.474,
         "image_url": "/static/landmarks/shenzhen_landmark_2.png",
         "description": "明清海防古城，展示深圳更早的海防记忆。"
       }
@@ -1302,18 +1402,22 @@
     "dialect_sample": "靓",
     "dialect_explanation": "粤语，表示漂亮、好看。",
     "tags": [
-      "coastal",
-      "lingnan",
-      "modern_city"
+      "沿海",
+      "岭南",
+      "现代都市"
     ],
     "landmarks": [
       {
         "name": "情侣路",
+        "lat": 22.2574,
+        "lng": 113.5839,
         "image_url": "/static/landmarks/zhuhai_landmark_1.png",
         "description": "沿海步道连接城市海景，是珠海最具识别度的公共空间。"
       },
       {
         "name": "珠海渔女",
+        "lat": 22.2567,
+        "lng": 113.5889,
         "image_url": "/static/landmarks/zhuhai_landmark_2.png",
         "description": "海边雕塑地标，象征城市滨海形象。"
       }
@@ -1354,18 +1458,22 @@
     "dialect_sample": "靓仔靓女",
     "dialect_explanation": "粤桂地区常用称呼，表示帅哥美女，也可作亲切称呼。",
     "tags": [
-      "lingnan",
-      "southwest",
-      "food_city"
+      "岭南",
+      "西南",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "青秀山",
+        "lat": 22.7867,
+        "lng": 108.3944,
         "image_url": "/static/landmarks/nanning_landmark_1.png",
         "description": "城市绿肺，山水园林和观景平台适合慢游。"
       },
       {
         "name": "三街两巷",
+        "lat": 22.8166,
+        "lng": 108.3225,
         "image_url": "/static/landmarks/nanning_landmark_2.png",
         "description": "老城更新街区，展示骑楼与南宁历史生活。"
       }
@@ -1406,18 +1514,22 @@
     "dialect_sample": "蛮好耍",
     "dialect_explanation": "桂林口语，表示很好玩。",
     "tags": [
-      "southwest",
-      "landscape",
-      "food_city"
+      "西南",
+      "山水",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "漓江",
+        "lat": 25.24,
+        "lng": 110.42,
         "image_url": "/static/landmarks/guilin_landmark_1.png",
         "description": "山水画卷般的河流景观，是桂林旅游核心名片。"
       },
       {
         "name": "象鼻山",
+        "lat": 25.2737,
+        "lng": 110.296,
         "image_url": "/static/landmarks/guilin_landmark_2.png",
         "description": "形似巨象饮水，是桂林城市地标。"
       }
@@ -1458,18 +1570,22 @@
     "dialect_sample": "板扎",
     "dialect_explanation": "云南话，表示很好、很棒。",
     "tags": [
-      "southwest",
-      "modern_city",
-      "food_city"
+      "西南",
+      "现代都市",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "滇池",
+        "lat": 24.9054,
+        "lng": 102.6619,
         "image_url": "/static/landmarks/kunming_landmark_1.png",
         "description": "高原湖泊，海埂大坝和西山共同构成昆明风景线。"
       },
       {
         "name": "金马碧鸡坊",
+        "lat": 25.0359,
+        "lng": 102.7115,
         "image_url": "/static/landmarks/kunming_landmark_2.png",
         "description": "老城地标，连接昆明商业街区与历史记忆。"
       }
@@ -1510,18 +1626,22 @@
     "dialect_sample": "安逸",
     "dialect_explanation": "西南地区常用语，表示舒服、惬意。",
     "tags": [
-      "southwest",
-      "spicy_food",
-      "food_city"
+      "西南",
+      "美食",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "甲秀楼",
+        "lat": 26.574,
+        "lng": 106.7249,
         "image_url": "/static/landmarks/guiyang_landmark_1.png",
         "description": "南明河畔古楼，是贵阳老城最具代表性的地标。"
       },
       {
         "name": "黔灵山公园",
+        "lat": 26.6048,
+        "lng": 106.6936,
         "image_url": "/static/landmarks/guiyang_landmark_2.png",
         "description": "城市山地公园，寺庙、湖水与山林相连。"
       }
@@ -1562,18 +1682,22 @@
     "dialect_sample": "赛白努",
     "dialect_explanation": "蒙古语问候语，意思是你好。",
     "tags": [
-      "north_china",
-      "grassland",
-      "food_city"
+      "华北",
+      "草原",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "大召寺",
+        "lat": 40.8017,
+        "lng": 111.6522,
         "image_url": "/static/landmarks/hohhot_landmark_1.png",
         "description": "呼和浩特重要寺庙，体现藏传佛教与城市历史。"
       },
       {
         "name": "内蒙古博物院",
+        "lat": 40.841,
+        "lng": 111.7575,
         "image_url": "/static/landmarks/hohhot_landmark_2.png",
         "description": "展示草原文明、自然生态与民族文化。"
       }
@@ -1614,18 +1738,22 @@
     "dialect_sample": "攒劲",
     "dialect_explanation": "西北口语，表示很棒、有劲道。",
     "tags": [
-      "northwest",
-      "food_city",
-      "heritage"
+      "西北",
+      "美食之城",
+      "文化遗产"
     ],
     "landmarks": [
       {
         "name": "西夏陵",
+        "lat": 38.4079,
+        "lng": 105.9844,
         "image_url": "/static/landmarks/yinchuan_landmark_1.png",
         "description": "西夏王陵遗址，展现西北历史文化的重要面向。"
       },
       {
         "name": "镇北堡西部影城",
+        "lat": 38.622,
+        "lng": 106.0633,
         "image_url": "/static/landmarks/yinchuan_landmark_2.png",
         "description": "电影取景地与西北风貌结合，适合演示文化记忆。"
       }
@@ -1666,18 +1794,22 @@
     "dialect_sample": "尕",
     "dialect_explanation": "兰州及西北口语，常表示小、亲切。",
     "tags": [
-      "northwest",
-      "food_city",
-      "river_city"
+      "西北",
+      "美食之城",
+      "江河城市"
     ],
     "landmarks": [
       {
         "name": "中山桥",
+        "lat": 36.0649,
+        "lng": 103.8253,
         "image_url": "/static/landmarks/lanzhou_landmark_1.png",
         "description": "黄河铁桥，是兰州最醒目的城市地标之一。"
       },
       {
         "name": "白塔山",
+        "lat": 36.0717,
+        "lng": 103.8238,
         "image_url": "/static/landmarks/lanzhou_landmark_2.png",
         "description": "隔河俯瞰城区与黄河，是理解兰州地形的好位置。"
       }
@@ -1718,18 +1850,22 @@
     "dialect_sample": "亚克西",
     "dialect_explanation": "维吾尔语常用表达，意思是好、不错。",
     "tags": [
-      "northwest",
-      "silk_road",
-      "food_city"
+      "西北",
+      "丝路",
+      "美食之城"
     ],
     "landmarks": [
       {
         "name": "国际大巴扎",
+        "lat": 43.7793,
+        "lng": 87.6176,
         "image_url": "/static/landmarks/urumqi_landmark_1.png",
         "description": "集市、建筑和演艺结合，是观察新疆多元文化的窗口。"
       },
       {
         "name": "红山公园",
+        "lat": 43.8146,
+        "lng": 87.6149,
         "image_url": "/static/landmarks/urumqi_landmark_2.png",
         "description": "城市中心山体公园，可俯瞰乌鲁木齐城区。"
       }
@@ -1770,18 +1906,22 @@
     "dialect_sample": "椰香",
     "dialect_explanation": "海南旅行语境中常用来形容带有椰子清香的风味。",
     "tags": [
-      "coastal",
-      "lingnan",
-      "landscape"
+      "沿海",
+      "岭南",
+      "山水"
     ],
     "landmarks": [
       {
         "name": "亚龙湾",
+        "lat": 18.2293,
+        "lng": 109.6386,
         "image_url": "/static/landmarks/sanya_landmark_1.png",
         "description": "海水清澈、沙滩绵长，是三亚代表性海湾。"
       },
       {
         "name": "天涯海角",
+        "lat": 18.2931,
+        "lng": 109.344,
         "image_url": "/static/landmarks/sanya_landmark_2.png",
         "description": "海滨礁石景区，承载浪漫旅行想象。"
       }

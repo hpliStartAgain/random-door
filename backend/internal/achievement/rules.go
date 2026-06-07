@@ -8,12 +8,13 @@ import (
 
 // UserStats is a snapshot of a user's activity, built once per evaluation.
 type UserStats struct {
-	CheckinCount    int
-	CheckinCityTags map[string]int  // tag -> distinct city count
-	CheckinTagAny   map[string]bool // whether user checked in any city with this tag
-	GameVisitCount  int             // distinct cities in game mode
-	MaxDiceDistance int             // max single dice distance
-	MaxSameDirRun   map[string]int  // direction -> max consecutive count
+	CheckinCount     int
+	VisitedCityCount int
+	VisitedCityTags  map[string]int  // tag -> distinct visited city count
+	VisitedTagAny    map[string]bool // whether user visited any city with this tag
+	GameVisitCount   int             // distinct cities in game mode
+	MaxDiceDistance  int             // max single dice distance
+	MaxSameDirRun    map[string]int  // direction -> max consecutive count
 }
 
 // Match checks if a single achievement rule is satisfied.
@@ -31,7 +32,7 @@ func Match(ruleType, ruleValue string, s UserStats) bool {
 		return s.CheckinCount >= n
 
 	case "city_tag":
-		return s.CheckinTagAny[ruleValue]
+		return s.VisitedTagAny[ruleValue]
 
 	case "tag_count":
 		parts := strings.SplitN(ruleValue, ":", 2)
@@ -45,7 +46,15 @@ func Match(ruleType, ruleValue string, s UserStats) bool {
 			slog.Warn("invalid count in tag_count", "value", ruleValue)
 			return false
 		}
-		return s.CheckinCityTags[tag] >= n
+		return s.VisitedCityTags[tag] >= n
+
+	case "visit_count":
+		n, err := strconv.Atoi(ruleValue)
+		if err != nil {
+			slog.Warn("invalid rule_value for visit_count", "value", ruleValue)
+			return false
+		}
+		return s.VisitedCityCount >= n
 
 	case "game_visit_count":
 		n, err := strconv.Atoi(ruleValue)

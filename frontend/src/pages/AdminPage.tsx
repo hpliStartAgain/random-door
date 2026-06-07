@@ -1,12 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ClipboardPaste, Link2, Upload } from 'lucide-react';
+import { ClipboardPaste, Link2, Plus, Upload } from 'lucide-react';
 import { api } from '../api';
 import { useCityStore } from '../store/useCityStore';
-import type { AdminCoverageResponse, CityDetail } from '../api/types';
+import type { AdminAchievement, AdminCoverageResponse, AdminTagItem, CityDetail } from '../api/types';
 import { useToastStore } from '../store/useToastStore';
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ACHIEVEMENT_RULE_TYPES = [
+  { value: 'city_tag', label: '到过标签城市' },
+  { value: 'tag_count', label: '到过多座标签城市' },
+  { value: 'visit_count', label: '累计到过城市' },
+  { value: 'first_checkin', label: '首次打卡' },
+  { value: 'checkin_count', label: '累计打卡' },
+  { value: 'game_visit_count', label: '任意门到达' },
+  { value: 'dice_direction', label: '连续方向' },
+  { value: 'dice_distance', label: '单次距离' },
+];
 
 function imageExtension(mimeType: string): string {
   if (mimeType === 'image/jpeg') return 'jpg';
@@ -185,8 +195,20 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
   const [token, setToken] = useState('');
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [adminTab, setAdminTab] = useState<'cities' | 'tags' | 'achievements'>('cities');
   const [cityDetails, setCityDetails] = useState<Record<number, CityDetail>>({});
   const [cityDrafts, setCityDrafts] = useState<Record<number, { intro: string; tags: string; dialect_sample: string; dialect_explanation: string }>>({});
+  const [tagAddDrafts, setTagAddDrafts] = useState<Record<number, string>>({});
+  const [tagItems, setTagItems] = useState<AdminTagItem[]>([]);
+  const [achievements, setAchievements] = useState<AdminAchievement[]>([]);
+  const [achievementDraft, setAchievementDraft] = useState({
+    code: '',
+    name: '',
+    description: '',
+    rule_type: 'city_tag',
+    rule_value: '',
+    badge_url: '',
+  });
   const [coverage, setCoverage] = useState<AdminCoverageResponse | null>(null);
   const [expandedCity, setExpandedCity] = useState<number | null>(null);
   const [newDrafts, setNewDrafts] = useState<Record<number, {
@@ -199,12 +221,30 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
 
   useEffect(() => { loadCities(); }, [loadCities]);
 
+  const refreshTags = async () => {
+    if (!token.trim()) return;
+    const res = await api.adminTags(token);
+    setTagItems(res.tags);
+  };
+
+  const refreshAchievements = async () => {
+    if (!token.trim()) return;
+    const res = await api.adminAchievements(token);
+    setAchievements(res.achievements);
+  };
+
   const handleAuth = async () => {
     if (!token.trim() || authLoading) return;
     setAuthLoading(true);
     try {
-      const cov = await api.adminCoverage(token);
+      const [cov, tags, achs] = await Promise.all([
+        api.adminCoverage(token),
+        api.adminTags(token),
+        api.adminAchievements(token),
+      ]);
       setCoverage(cov);
+      setTagItems(tags.tags);
+      setAchievements(achs.achievements);
       setAuthed(true);
     } catch {
       pushToast('Token 无效，请检查 ADMIN_TOKEN', 'error');
@@ -218,6 +258,10 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
     try {
       setCoverage(await api.adminCoverage(token));
     } catch { pushToast('覆盖率加载失败，请检查 ADMIN_TOKEN', 'error'); }
+  };
+
+  const refreshAdminMeta = async () => {
+    await Promise.all([refreshCoverage(), refreshTags(), refreshAchievements()]);
   };
 
   const loadCityDetail = async (cityId: number) => {
@@ -272,6 +316,23 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
     }));
   };
 
+  const parseDraftTags = (cityId: number) =>
+    (cityDrafts[cityId]?.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+  const setDraftTags = (cityId: number, tags: string[]) => {
+    const uniqueTags = Array.from(new Set(tags.map(t => t.trim()).filter(Boolean)));
+    setCityDrafts(prev => ({
+      ...prev,
+      [cityId]: { ...prev[cityId], tags: uniqueTags.join(',') },
+    }));
+  };
+
+  const addTagToCityDraft = (cityId: number, tag: string) => {
+    if (!tag.trim()) return;
+    setDraftTags(cityId, [...parseDraftTags(cityId), tag.trim()]);
+    setTagAddDrafts(prev => ({ ...prev, [cityId]: '' }));
+  };
+
   const saveCityDraft = async (cityId: number) => {
     const draft = cityDrafts[cityId];
     if (!draft) return;
@@ -279,10 +340,10 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
       intro: draft.intro,
       dialect_sample: draft.dialect_sample,
       dialect_explanation: draft.dialect_explanation,
-      tags: draft.tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: parseDraftTags(cityId),
     }, token);
     pushToast('城市内容已更新', 'success');
-    await Promise.all([loadCities(), refreshCityDetail(cityId), refreshCoverage()]);
+    await Promise.all([loadCities(), refreshCityDetail(cityId), refreshAdminMeta()]);
   };
 
   const refreshAdminCity = async (cityId: number) => {
@@ -370,6 +431,71 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
     await refreshAdminCity(cityId);
   };
 
+  const renameTag = async (tag: string) => {
+    const next = window.prompt('标签名称', tag);
+    if (next === null || !next.trim() || next.trim() === tag) return;
+    await api.adminRenameTag(tag, next.trim(), token);
+    pushToast('标签已更新', 'success');
+    await Promise.all([loadCities(), refreshTags(), refreshAchievements()]);
+  };
+
+  const deleteTag = async (tag: string) => {
+    if (!window.confirm(`删除标签「${tag}」？`)) return;
+    await api.adminDeleteTag(tag, token);
+    pushToast('标签已删除', 'success');
+    await Promise.all([loadCities(), refreshTags()]);
+  };
+
+  const createAchievement = async () => {
+    if (!achievementDraft.code.trim() || !achievementDraft.name.trim()) return;
+    await api.adminCreateAchievement({
+      code: achievementDraft.code.trim(),
+      name: achievementDraft.name.trim(),
+      description: achievementDraft.description.trim(),
+      rule_type: achievementDraft.rule_type,
+      rule_value: achievementDraft.rule_value.trim(),
+      badge_url: achievementDraft.badge_url.trim() || undefined,
+    }, token);
+    setAchievementDraft({ code: '', name: '', description: '', rule_type: 'city_tag', rule_value: '', badge_url: '' });
+    pushToast('成就已新增', 'success');
+    await refreshAchievements();
+  };
+
+  const editAchievement = async (item: AdminAchievement) => {
+    const name = window.prompt('成就名称', item.name);
+    if (name === null) return;
+    const description = window.prompt('描述', item.description || '');
+    if (description === null) return;
+    const ruleValue = window.prompt('规则参数', item.rule_value);
+    if (ruleValue === null) return;
+    await api.adminUpdateAchievement(item.id, {
+      name: name.trim(),
+      description,
+      rule_type: item.rule_type,
+      rule_value: ruleValue.trim(),
+    }, token);
+    pushToast('成就已更新', 'success');
+    await refreshAchievements();
+  };
+
+  const deleteAchievement = async (item: AdminAchievement) => {
+    if (!window.confirm(`删除成就「${item.name}」？`)) return;
+    await api.adminDeleteAchievement(item.id, token);
+    pushToast('成就已删除', 'success');
+    await refreshAchievements();
+  };
+
+  const applyTagToAchievementRule = (tag: string) => {
+    if (!tag) return;
+    setAchievementDraft(prev => {
+      if (prev.rule_type === 'tag_count') {
+        const count = prev.rule_value.includes(':') ? prev.rule_value.split(':').pop() || '1' : '1';
+        return { ...prev, rule_value: `${tag}:${count}` };
+      }
+      return { ...prev, rule_value: tag };
+    });
+  };
+
   if (!authed) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur">
@@ -430,7 +556,23 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
           </div>
         )}
 
-        {cities.map(city => (
+        <div className="grid grid-cols-3 gap-2 rounded-xl bg-secondary p-1">
+          {([
+            ['cities', '城市内容'],
+            ['tags', '标签'],
+            ['achievements', '成就勋章'],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setAdminTab(key)}
+              className={`h-9 rounded-lg text-xs font-bold transition-colors ${adminTab === key ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {adminTab === 'cities' && cities.map(city => (
           <div key={city.id} className="border border-border rounded-2xl overflow-hidden">
             <button
               onClick={() => handleExpand(city.id)}
@@ -478,6 +620,33 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
                         className="w-full text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
                         placeholder="标签，逗号分隔"
                       />
+                      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+                        <select
+                          value=""
+                          onChange={e => addTagToCityDraft(city.id, e.target.value)}
+                          className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                        >
+                          <option value="">选择已有标签</option>
+                          {tagItems.map(item => (
+                            <option key={item.tag} value={item.tag}>{item.tag}（{item.city_count}）</option>
+                          ))}
+                        </select>
+                        <input
+                          value={tagAddDrafts[city.id] || ''}
+                          onChange={e => setTagAddDrafts(prev => ({ ...prev, [city.id]: e.target.value }))}
+                          onKeyDown={e => e.key === 'Enter' && addTagToCityDraft(city.id, tagAddDrafts[city.id] || '')}
+                          className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                          placeholder="新增标签"
+                        />
+                        <button
+                          onClick={() => addTagToCityDraft(city.id, tagAddDrafts[city.id] || '')}
+                          disabled={!(tagAddDrafts[city.id] || '').trim()}
+                          className="text-xs px-3 py-2 rounded-lg bg-primary text-primary-foreground font-bold disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          添加
+                        </button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <input
                           value={cityDrafts[city.id].dialect_sample}
@@ -705,6 +874,123 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
             )}
           </div>
         ))}
+
+        {adminTab === 'tags' && (
+          <div className="border border-border rounded-2xl p-4 bg-secondary/20 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-bold">标签管理</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{tagItems.length} 个中文标签</div>
+              </div>
+              <button onClick={refreshTags} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-secondary transition-colors">刷新</button>
+            </div>
+            <div className="space-y-2">
+              {tagItems.map(item => (
+                <div key={item.tag} className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2">
+                  <span className="text-sm font-semibold flex-1">{item.tag}</span>
+                  <span className="text-xs text-muted-foreground">{item.city_count} 城</span>
+                  <button onClick={() => renameTag(item.tag)} className="text-xs px-2 py-1 rounded-lg border border-border hover:bg-secondary transition-colors">重命名</button>
+                  <button onClick={() => deleteTag(item.tag)} className="text-xs px-2 py-1 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/5 transition-colors">删除</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {adminTab === 'achievements' && (
+          <div className="space-y-3">
+            <div className="border border-border rounded-2xl p-4 bg-secondary/20 space-y-3">
+              <div className="text-sm font-bold">新增成就</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <input
+                  value={achievementDraft.code}
+                  onChange={e => setAchievementDraft(prev => ({ ...prev, code: e.target.value }))}
+                  className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                  placeholder="code"
+                />
+                <input
+                  value={achievementDraft.name}
+                  onChange={e => setAchievementDraft(prev => ({ ...prev, name: e.target.value }))}
+                  className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                  placeholder="成就名称"
+                />
+                <select
+                  value={achievementDraft.rule_type}
+                  onChange={e => setAchievementDraft(prev => ({ ...prev, rule_type: e.target.value, rule_value: e.target.value === 'first_checkin' ? '' : prev.rule_value }))}
+                  className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                >
+                  {ACHIEVEMENT_RULE_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+                <input
+                  value={achievementDraft.rule_value}
+                  onChange={e => setAchievementDraft(prev => ({ ...prev, rule_value: e.target.value }))}
+                  className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                  placeholder="规则参数"
+                />
+                {(achievementDraft.rule_type === 'city_tag' || achievementDraft.rule_type === 'tag_count') && (
+                  <select
+                    value=""
+                    onChange={e => applyTagToAchievementRule(e.target.value)}
+                    className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                  >
+                    <option value="">选择标签</option>
+                    {tagItems.map(item => <option key={item.tag} value={item.tag}>{item.tag}</option>)}
+                  </select>
+                )}
+                <input
+                  value={achievementDraft.badge_url}
+                  onChange={e => setAchievementDraft(prev => ({ ...prev, badge_url: e.target.value }))}
+                  className="text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                  placeholder="/static/badges/..."
+                />
+              </div>
+              <textarea
+                value={achievementDraft.description}
+                onChange={e => setAchievementDraft(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full min-h-16 text-sm px-3 py-2 rounded-xl border border-border bg-background outline-none focus:border-primary/50"
+                placeholder="描述"
+              />
+              <button
+                onClick={createAchievement}
+                disabled={!achievementDraft.code.trim() || !achievementDraft.name.trim()}
+                className="text-xs px-3 py-2 rounded-lg bg-primary text-primary-foreground font-bold disabled:opacity-50"
+              >
+                新增成就
+              </button>
+            </div>
+
+            {achievements.map(item => (
+              <div key={item.id} className="border border-border rounded-2xl p-4 bg-background space-y-3">
+                <div className="flex items-start gap-3">
+                  {item.badge_url ? <img src={item.badge_url} alt="" className="w-12 h-12 rounded-xl object-cover border border-border" /> : <div className="w-12 h-12 rounded-xl bg-secondary border border-border" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm">{item.name}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{item.code} · {item.rule_type} · {item.rule_value || '空'}</div>
+                    {item.description && <div className="text-xs text-muted-foreground mt-1">{item.description}</div>}
+                  </div>
+                  <button onClick={() => editAchievement(item)} className="text-xs px-2 py-1 rounded-lg border border-border hover:bg-secondary transition-colors">编辑</button>
+                  <button onClick={() => deleteAchievement(item)} className="text-xs px-2 py-1 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/5 transition-colors">删除</button>
+                </div>
+                <UploadBtn
+                  label="上传勋章"
+                  currentUrl={item.badge_url}
+                  onUpload={async (file) => {
+                    const res = await api.adminUploadAchievementBadge(item.id, file, token);
+                    pushToast(`${item.name} 勋章已更新`, 'success');
+                    await refreshAchievements();
+                    return res;
+                  }}
+                  onBindUrl={async (url) => {
+                    const res = await api.adminBindAchievementBadgeURL(item.id, url, token);
+                    pushToast(`${item.name} 勋章已导入本地`, 'success');
+                    await refreshAchievements();
+                    return res;
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

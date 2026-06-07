@@ -11,9 +11,18 @@ export interface UserResponse {
   current_city_id: number | null;
 }
 
+export interface AuthResponse {
+  user_id: number;
+  anonymous_id: string;
+  username: string;
+  nickname?: string;
+  current_city_id: number | null;
+}
+
 export interface UserProfileResponse {
   user_id: number;
   anonymous_id: string;
+  username?: string;
   nickname?: string;
   avatar_url?: string;
   age?: number;
@@ -29,6 +38,7 @@ export interface CityListItem {
   lng: number;
   cover_image_url?: string;
   tags: string[];
+  landmarks?: LandmarkMapItem[];
   landmark_count?: number;
   food_count?: number;
   character_count?: number;
@@ -38,9 +48,18 @@ export interface CityListResponse {
   cities: CityListItem[];
 }
 
+export interface LandmarkMapItem {
+  id: number;
+  name: string;
+  lat?: number;
+  lng?: number;
+}
+
 export interface Landmark {
   id: number;
   name: string;
+  lat?: number;
+  lng?: number;
   image_url?: string;
   description?: string;
   soundscape_url?: string;
@@ -84,6 +103,7 @@ export interface FreeVisitResponse {
   visit_id: number;
   city_id: number;
   visit_mode: string;
+  unlocked_achievements?: AchievementBrief[];
 }
 
 export interface NearestCity {
@@ -110,6 +130,7 @@ export interface GameRollResponse {
   distance_km: number;
   target_point: TargetPoint;
   target_city: NearestCity;
+  unlocked_achievements?: AchievementBrief[];
 }
 
 export interface ChatResponse {
@@ -218,6 +239,7 @@ export interface AdminUploadResponse {
   cover_image_url?: string;
   image_url?: string;
   avatar_url?: string;
+  badge_url?: string;
 }
 
 export interface AdminCoverageItem {
@@ -239,6 +261,30 @@ export interface AdminCoverageResponse {
 
 export interface AdminUpdateResponse {
   status: string;
+}
+
+export interface AdminTagItem {
+  tag: string;
+  city_count: number;
+}
+
+export interface AdminTagListResponse {
+  tags: AdminTagItem[];
+}
+
+export interface AdminAchievement {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  rule_type: string;
+  rule_value: string;
+  badge_url?: string;
+  created_at: string;
+}
+
+export interface AdminAchievementListResponse {
+  achievements: AdminAchievement[];
 }
 
 export interface UserAssetCity {

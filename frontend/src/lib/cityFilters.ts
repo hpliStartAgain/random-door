@@ -2,13 +2,13 @@ import type { CityListItem } from '../api/types';
 
 // 区域分组：每个区域包含一组 tag（来自 cities.json 实际 tags）
 export const REGION_GROUPS: Record<string, { label: string; tags: string[] }> = {
-  north_china: { label: '华北 · 古都', tags: ['north_china', 'ancient_capital'] },
-  jiangnan:    { label: '江南 · 水乡', tags: ['jiangnan', 'canal_city', 'water_town'] },
-  southwest:   { label: '西南 · 人文', tags: ['southwest', 'ethnic_culture', 'plateau'] },
-  coastal:     { label: '沿海 · 港口', tags: ['coastal', 'port', 'maritime'] },
-  northwest:   { label: '西北 · 丝路', tags: ['northwest', 'silk_road', 'desert'] },
-  food_city:   { label: '美食之都', tags: ['food_city', 'spicy_food', 'dim_sum'] },
-  historic:    { label: '历史名城', tags: ['historic', 'ancient_wall', 'heritage'] },
+  north_china: { label: '华北 · 古都', tags: ['华北', '古都'] },
+  jiangnan:    { label: '江南 · 水乡', tags: ['江南', '运河', '水乡'] },
+  southwest:   { label: '西南 · 人文', tags: ['西南', '民族风情', '高原'] },
+  coastal:     { label: '沿海 · 港口', tags: ['沿海', '港口', '海洋文化'] },
+  northwest:   { label: '西北 · 丝路', tags: ['西北', '丝路', '大漠'] },
+  food_city:   { label: '美食之都', tags: ['美食之城', '美食', '广府点心'] },
+  historic:    { label: '历史名城', tags: ['历史名城', '古城墙', '文化遗产'] },
 };
 
 export interface RegionOption {

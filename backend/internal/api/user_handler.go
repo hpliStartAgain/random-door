@@ -23,6 +23,54 @@ type updateProfileReq struct {
 	HomeRegion *string `json:"home_region"`
 }
 
+type registerReq struct {
+	UserID   *int64  `json:"user_id"`
+	Username string  `json:"username" binding:"required"`
+	Password string  `json:"password" binding:"required"`
+	Nickname *string `json:"nickname"`
+}
+
+type loginReq struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+func (h *UserHandler) Register(c *gin.Context) {
+	var req registerReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp(ErrCodeInvalidParam, "username and password are required"))
+		return
+	}
+	result, err := h.svc.Register(c.Request.Context(), service.RegisterRequest{
+		UserID:   req.UserID,
+		Username: req.Username,
+		Password: req.Password,
+		Nickname: req.Nickname,
+	})
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, result)
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var req loginReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorResp(ErrCodeInvalidParam, "username and password are required"))
+		return
+	}
+	result, err := h.svc.Login(c.Request.Context(), service.LoginRequest{
+		Username: req.Username,
+		Password: req.Password,
+	})
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
 func (h *UserHandler) Profile(c *gin.Context) {
 	userID, err := parseUserIDParam(c)
 	if err != nil {

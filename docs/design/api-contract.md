@@ -29,10 +29,12 @@
 | HTTP | code | 含义 |
 |---|---|---|
 | 400 | INVALID_PARAM | 参数缺失或格式错误 |
+| 403 | PERMISSION_DENIED | 登录凭据错误或无权限访问 |
 | 404 | NOT_FOUND | 资源不存在（城市/用户/人物） |
 | 413 | FILE_TOO_LARGE | 上传文件超过 5MB |
 | 415 | UNSUPPORTED_MEDIA | 文件类型不支持 |
 | 429 | AI_QUOTA_EXCEEDED | 匿名用户当日 AI 调用次数超限 |
+| 409 | CONFLICT | 账号名、成就 code 等唯一资源冲突 |
 | 502 | AI_UPSTREAM_ERROR | 外部 LLM / 生图 API 失败 |
 | 504 | AI_TIMEOUT | 外部 AI 调用超时 |
 | 500 | INTERNAL_ERROR | 服务器内部错误 |
@@ -67,6 +69,46 @@
 
 ---
 
+## 1.1 简单账号注册/登录
+
+注册会把当前匿名用户升级为账号用户；后续仍以返回的 `user_id` 调用旅行轨迹、成就、打卡等接口。
+
+### POST /api/auth/register
+
+**请求**
+```json
+{ "user_id": 1, "username": "demo_user", "password": "123456", "nickname": "北京游客" }
+```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| user_id | int64 | 否 | 当前匿名用户 id；传入时保留其旅行轨迹和成就 |
+| username | string | 是 | 3~32 位字母、数字、下划线，唯一 |
+| password | string | 是 | 6~72 bytes |
+| nickname | string | 否 | 1~64 字 |
+
+**响应 201**
+```json
+{
+  "user_id": 1,
+  "anonymous_id": "browser_generated_uuid",
+  "username": "demo_user",
+  "nickname": "北京游客",
+  "current_city_id": 3
+}
+```
+
+### POST /api/auth/login
+
+**请求**
+```json
+{ "username": "demo_user", "password": "123456" }
+```
+
+**响应 200**：同注册响应。
+**错误**：账号已存在 → 409 CONFLICT；账号或密码错误 → 403 PERMISSION_DENIED。
+
+---
+
 ## 2. GET /api/cities — 城市列表
 
 **请求**：无参数（演示版全量 35 城，seed 校验允许 12~100 城）。
@@ -82,7 +124,10 @@
       "lat": 39.9042,
       "lng": 116.4074,
       "cover_image_url": "/static/landmarks/beijing_forbidden_city.jpg",
-      "tags": ["ancient_capital", "north_china"],
+      "tags": ["古都", "华北"],
+      "landmarks": [
+        { "id": 12, "name": "故宫", "lat": 39.9163, "lng": 116.3972 }
+      ],
       "landmark_count": 2,
       "food_count": 2,
       "character_count": 1
@@ -91,7 +136,7 @@
 }
 ```
 **用途**：自由探索地图打点 + 游戏模式候选城市集合。
-**字段说明**：`landmark_count` / `food_count` / `character_count` 为后端按城市聚合的内容数量（用于发现页信息密度展示）。三者均为非负整数，缺省 0；前端缺字段时按 0 处理，保持旧后端兼容。
+**字段说明**：`landmark_count` / `food_count` / `character_count` 为后端按城市聚合的内容数量（用于发现页信息密度展示）。三者均为非负整数，缺省 0；前端缺字段时按 0 处理，保持旧后端兼容。`landmarks` 为地图打点摘要，仅返回 id/name/lat/lng；地标详情仍以 `GET /api/cities/{city_id}` 为准。
 
 ---
 
@@ -111,9 +156,9 @@
   "cover_image_url": "/static/landmarks/xian.jpg",
   "dialect_sample": "嘹咋咧",
   "dialect_explanation": "陕西关中方言，表示很好、很棒。",
-  "tags": ["ancient_capital", "northwest"],
+  "tags": ["古都", "西北"],
   "landmarks": [
-    { "id": 12, "name": "兵马俑", "image_url": "/static/landmarks/bmy.jpg", "description": "...", "soundscape_url": "/static/soundscapes/xian_bingmayong.wav" }
+    { "id": 12, "name": "兵马俑", "lat": 34.3844, "lng": 109.2785, "image_url": "/static/landmarks/bmy.jpg", "description": "...", "soundscape_url": "/static/soundscapes/xian_bingmayong.wav" }
   ],
   "foods": [
     { "id": 5, "name": "肉夹馍", "image_url": "/static/foods/rjm.jpg", "description": "..." }
@@ -127,7 +172,7 @@
 **错误**：city_id 不是正整数 → 400 INVALID_PARAM。
 **注意**：响应中 characters 不返回 persona / prompt（敏感，仅后端组装 Prompt 用）。
 **字段说明**：`role_title`（身份，≤128 字）/ `life_span`（年代，≤64 字）/ `intro_quote`（角色口吻引导语，≤255 字）均为可选字段，缺省不下发（omitempty）。`intro_quote` 必须是角色口吻的引导文案，不得写成确定性史实断言，也不得声称人物真实复活。
-`soundscape_url` 为可选地标声景音频，只允许本地 `/static/soundscapes/...` 路径；前端必须由用户点击后播放，不自动播放。
+`lat` / `lng` 为地标代表点坐标，用于地图显式打点和进入地标视角；历史后台内容可为空，前端需在缺失时回退城市坐标或不显示地标 marker。`soundscape_url` 为可选地标声景音频，只允许本地 `/static/soundscapes/...` 路径；前端必须由用户点击后播放，不自动播放。
 
 ---
 
@@ -145,9 +190,16 @@
 
 **响应 200**
 ```json
-{ "visit_id": 1001, "city_id": 3, "visit_mode": "free" }
+{
+  "visit_id": 1001,
+  "city_id": 3,
+  "visit_mode": "free",
+  "unlocked_achievements": [
+    { "code": "ancient_capital_first", "name": "古都初见", "description": "首次到过一座古都城市" }
+  ]
+}
 ```
-**逻辑**：写 city_visits，visit_mode=free，dice_roll_id=null。
+**逻辑**：写 city_visits，visit_mode=free，dice_roll_id=null；随后按“到过城市”规则自动解锁成就。
 **错误**：user / city 不存在 → 404 NOT_FOUND；user_id / city_id 不是正整数或 source 不属于 map_click / search → 400 INVALID_PARAM。
 
 ---
@@ -191,10 +243,11 @@ lat/lng 可选；缺省时用默认位置（北京）。
   "target_city": {
     "id": 3, "name": "西安", "province": "陕西",
     "lat": 34.3416, "lng": 108.9398
-  }
+  },
+  "unlocked_achievements": []
 }
 ```
-**逻辑**（详见 geo-algorithm-detailed-design.md）：随机方向(8) + 随机距离(6档) → 算目标点 → 匹配最近城市(过滤当前、优先未访问、含兜底) → 写 dice_rolls → 写 city_visits(visit_mode=game, source=dice_roll, from_city_id, dice_roll_id)。
+**逻辑**（详见 geo-algorithm-detailed-design.md）：随机方向(8) + 随机距离(6档) → 算目标点 → 匹配最近城市(过滤当前、优先未访问、含兜底) → 写 dice_rolls → 写 city_visits(visit_mode=game, source=dice_roll, from_city_id, dice_roll_id) → 自动判定 travel/game 成就。
 
 ---
 
@@ -483,11 +536,11 @@ lat/lng 可选；缺省时用默认位置（北京）。
 {
   "checkin_id": 3001,
   "unlocked_achievements": [
-    { "code": "ancient_capital_first", "name": "古都初见", "description": "首次打卡一座古都城市" }
+    { "code": "first_checkin", "name": "初次打卡", "description": "完成任意一次打卡" }
   ]
 }
 ```
-**逻辑**：事务内写 checkins → 调 achievement.evaluator 判定 → 写 user_achievements → 返回新解锁列表（无则空数组）。
+**逻辑**：事务内写 checkins → 调 achievement.evaluator 判定打卡类成就 → 写 user_achievements → 返回新解锁列表（无则空数组）。标签/城市类成就主要由访问城市接口触发。
 
 ---
 
@@ -502,7 +555,7 @@ lat/lng 可选；缺省时用默认位置（北京）。
     { "code": "first_checkin", "name": "初次打卡", "description": "...", "badge_url": "/static/badges/first.png", "unlocked_at": "2026-05-30T09:00:00+08:00" }
   ],
   "locked": [
-    { "code": "ancient_capital_tour", "name": "古都巡礼", "description": "打卡3座古都城市", "badge_url": "/static/badges/ac3.png" }
+    { "code": "ancient_capital_tour", "name": "古都巡礼", "description": "到过3座古都城市", "badge_url": "/static/badges/ac3.png" }
   ],
   "progress": [
     { "code": "ancient_capital_tour", "current": 1, "target": 3 }
@@ -550,6 +603,7 @@ lat/lng 可选；缺省时用默认位置（北京）。
 {
   "user_id": 1,
   "anonymous_id": "browser_generated_uuid",
+  "username": "demo_user",
   "nickname": "北京游客",
   "avatar_url": "/static/avatars/default.png",
   "age": 28,
@@ -605,7 +659,55 @@ Admin 接口均需 `X-Admin-Token` 或 `Authorization: Bearer <token>`。
 }
 ```
 
-### 11.2 PATCH 内容字段
+### 11.2 标签管理
+
+标签值为中文展示标签，来源于 `city_tags`。城市编辑时可从本接口返回值下拉选择，也可提交新中文标签。
+
+- `GET /api/admin/tags`
+- `PATCH /api/admin/tags/{tag}` 请求 `{ "tag": "新标签" }`，全局重命名并同步成就规则参数
+- `DELETE /api/admin/tags/{tag}`，若仍被成就引用则返回 409 CONFLICT
+
+`GET` 响应：
+```json
+{
+  "tags": [
+    { "tag": "古都", "city_count": 6 },
+    { "tag": "沿海", "city_count": 8 }
+  ]
+}
+```
+
+### 11.3 成就 / 勋章管理
+
+- `GET /api/admin/achievements`
+- `POST /api/admin/achievements`
+- `PATCH /api/admin/achievements/{id}`
+- `DELETE /api/admin/achievements/{id}`
+- `POST /api/admin/achievements/{id}/badge`
+- `PATCH /api/admin/achievements/{id}/badge`，远程 URL 会导入本地 `/uploads/admin_imports/...`
+
+创建/更新成就字段：
+```json
+{
+  "code": "visit_5_cities",
+  "name": "五城漫游",
+  "description": "累计到过5座城市",
+  "rule_type": "visit_count",
+  "rule_value": "5",
+  "badge_url": "/static/badges/roamer.png"
+}
+```
+
+`GET` 响应：
+```json
+{
+  "achievements": [
+    { "id": 1, "code": "first_checkin", "name": "初次打卡", "rule_type": "first_checkin", "rule_value": "", "badge_url": "/static/badges/first_checkin.png" }
+  ]
+}
+```
+
+### 11.4 PATCH 内容字段
 
 - `PATCH /api/admin/cities/{id}`
 - `PATCH /api/admin/landmarks/{id}`
@@ -616,10 +718,10 @@ Admin 接口均需 `X-Admin-Token` 或 `Authorization: Bearer <token>`。
 
 **示例**
 ```json
-{ "intro": "新的城市简介", "tags": ["ancient_capital", "north_china"] }
+{ "intro": "新的城市简介", "tags": ["古都", "华北"] }
 ```
 
-### 11.3 创建/删除城市下属内容
+### 11.5 创建/删除城市下属内容
 
 - `POST /api/admin/cities/{city_id}/landmarks`
 - `POST /api/admin/cities/{city_id}/foods`
@@ -628,9 +730,9 @@ Admin 接口均需 `X-Admin-Token` 或 `Authorization: Bearer <token>`。
 - `DELETE /api/admin/foods/{id}`
 - `DELETE /api/admin/characters/{id}`
 
-地标/美食创建请求：
+地标/美食创建请求；地标支持 `lat` / `lng`，美食不使用坐标：
 ```json
-{ "name": "故宫", "description": "明清宫城。", "image_url": "/uploads/admin_imports/a.png" }
+{ "name": "故宫", "lat": 39.9163, "lng": 116.3972, "description": "明清宫城。", "image_url": "/uploads/admin_imports/a.png" }
 ```
 
 人物创建请求：
@@ -651,7 +753,7 @@ Admin 接口均需 `X-Admin-Token` 或 `Authorization: Bearer <token>`。
 { "status": "deleted" }
 ```
 
-### 11.4 图片上传/导入
+### 11.6 图片上传/导入
 
 保留现有上传接口：
 - `POST /api/admin/cities/{city_id}/cover-image`
@@ -682,4 +784,4 @@ URL 绑定接口不再保存远程 URL。`PATCH .../image` 或 `PATCH .../cover-
 | /users/{id}/achievements | achievements, user_achievements |
 | /users/{id}/assets | city_visits, checkins, cities, landmarks, achievements |
 | /users/{id}/profile | users |
-| /admin/* | cities, city_tags, landmarks, foods, characters |
+| /admin/* | cities, city_tags, landmarks, foods, characters, achievements, user_achievements |

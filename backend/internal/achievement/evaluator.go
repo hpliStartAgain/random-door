@@ -63,8 +63,8 @@ func Evaluate(ctx context.Context, userID int64, repos Repos) ([]model.Achieveme
 
 func buildUserStats(ctx context.Context, userID int64, db *gorm.DB) (UserStats, error) {
 	s := UserStats{
-		CheckinCityTags: make(map[string]int),
-		CheckinTagAny:   make(map[string]bool),
+		VisitedCityTags: make(map[string]int),
+		VisitedTagAny:   make(map[string]bool),
 		MaxSameDirRun:   make(map[string]int),
 	}
 
@@ -73,16 +73,17 @@ func buildUserStats(ctx context.Context, userID int64, db *gorm.DB) (UserStats, 
 	db.WithContext(ctx).Model(&model.Checkin{}).Where("user_id = ?", userID).Count(&checkinCount)
 	s.CheckinCount = int(checkinCount)
 
-	// Checkin city tags: find distinct cities user checked in, then their tags
-	var checkinCityIDs []int64
-	db.WithContext(ctx).Model(&model.Checkin{}).
+	// Visited city tags: tag-based achievements unlock when a user has travelled to a city.
+	var visitedCityIDs []int64
+	db.WithContext(ctx).Model(&model.CityVisit{}).
 		Where("user_id = ?", userID).
 		Distinct("city_id").
-		Pluck("city_id", &checkinCityIDs)
+		Pluck("city_id", &visitedCityIDs)
+	s.VisitedCityCount = len(visitedCityIDs)
 
-	if len(checkinCityIDs) > 0 {
+	if len(visitedCityIDs) > 0 {
 		var tags []model.CityTag
-		db.WithContext(ctx).Where("city_id IN ?", checkinCityIDs).Find(&tags)
+		db.WithContext(ctx).Where("city_id IN ?", visitedCityIDs).Find(&tags)
 
 		// Count distinct cities per tag
 		tagCities := make(map[string]map[int64]bool)
@@ -93,8 +94,8 @@ func buildUserStats(ctx context.Context, userID int64, db *gorm.DB) (UserStats, 
 			tagCities[t.Tag][t.CityID] = true
 		}
 		for tag, cities := range tagCities {
-			s.CheckinCityTags[tag] = len(cities)
-			s.CheckinTagAny[tag] = true
+			s.VisitedCityTags[tag] = len(cities)
+			s.VisitedTagAny[tag] = true
 		}
 	}
 

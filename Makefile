@@ -1,7 +1,7 @@
 # Makefile — 常用命令封装，降低团队上手成本
 # 对应 README.md。用法：make up / make seed ...
 
-.PHONY: up down build logs migrate seed seed-audit seed-sync lint test fe-dev fe-build
+.PHONY: up down build logs migrate seed seed-audit seed-sync seed-landmark-coords lint test fe-dev fe-build
 
 # ---------- Docker ----------
 up:            ## 启动全部容器
@@ -29,6 +29,9 @@ seed:          ## 显式补齐缺失 seed 行，不覆盖后台已有内容
 
 seed-sync:     ## 谨慎：按 seed 覆盖自然键匹配行
 	cd backend && go run ./cmd/seedtool -mode sync -confirm-overwrite
+
+seed-landmark-coords: ## 仅回填缺失的地标经纬度，不覆盖图片/描述等内容
+	cd backend && go run ./cmd/seedtool -mode backfill-landmark-coordinates
 
 # ---------- 质量 ----------
 lint:          ## 后端 + 前端静态检查

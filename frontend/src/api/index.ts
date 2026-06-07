@@ -8,12 +8,19 @@ import type {
   AdminCoverageResponse, AdminUpdateResponse, UserAssetsResponse,
   CommentListResponse, CommentItem, CommentTargetType,
   GuessCaptionResponse, GuessChallengeResponse, GuessAnswerResponse,
-  UserProfileResponse,
+  UserProfileResponse, AuthResponse, AdminTagListResponse,
+  AdminAchievementListResponse, AdminAchievement,
 } from './types';
 
 export const api = {
   createAnonymousUser: (anonymousId: string) =>
     apiClient.post<unknown, UserResponse>('/users/anonymous', { anonymous_id: anonymousId }),
+
+  register: (payload: { user_id?: number | null; username: string; password: string; nickname?: string }) =>
+    apiClient.post<unknown, AuthResponse>('/auth/register', payload),
+
+  login: (payload: { username: string; password: string }) =>
+    apiClient.post<unknown, AuthResponse>('/auth/login', payload),
 
   getCities: () =>
     apiClient.get<unknown, CityListResponse>('/cities'),
@@ -110,6 +117,41 @@ export const api = {
       headers: { 'X-Admin-Token': token },
     }),
 
+  adminTags: (token: string) =>
+    apiClient.get<unknown, AdminTagListResponse>('/admin/tags', {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminRenameTag: (tag: string, nextTag: string, token: string) =>
+    apiClient.patch<unknown, AdminUpdateResponse>(`/admin/tags/${encodeURIComponent(tag)}`, { tag: nextTag }, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminDeleteTag: (tag: string, token: string) =>
+    apiClient.delete<unknown, AdminUpdateResponse>(`/admin/tags/${encodeURIComponent(tag)}`, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminAchievements: (token: string) =>
+    apiClient.get<unknown, AdminAchievementListResponse>('/admin/achievements', {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminCreateAchievement: (payload: Record<string, unknown>, token: string) =>
+    apiClient.post<unknown, AdminAchievement>('/admin/achievements', payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminUpdateAchievement: (achievementId: number, payload: Record<string, unknown>, token: string) =>
+    apiClient.patch<unknown, AdminUpdateResponse>(`/admin/achievements/${achievementId}`, payload, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminDeleteAchievement: (achievementId: number, token: string) =>
+    apiClient.delete<unknown, AdminUpdateResponse>(`/admin/achievements/${achievementId}`, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
   adminUpdateCity: (cityId: number, payload: Record<string, unknown>, token: string) =>
     apiClient.patch<unknown, AdminUpdateResponse>(`/admin/cities/${cityId}`, payload, {
       headers: { 'X-Admin-Token': token },
@@ -188,6 +230,13 @@ export const api = {
     });
   },
 
+  adminUploadAchievementBadge: (achievementId: number, file: File, token: string) => {
+    const fd = new FormData(); fd.append('file', file);
+    return apiClient.post<unknown, AdminUploadResponse>(`/admin/achievements/${achievementId}/badge`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data', 'X-Admin-Token': token },
+    });
+  },
+
   adminBindCityCoverURL: (cityId: number, url: string, token: string) =>
     apiClient.patch<unknown, AdminUploadResponse>(`/admin/cities/${cityId}/cover-image`, { url }, {
       headers: { 'X-Admin-Token': token },
@@ -205,6 +254,11 @@ export const api = {
 
   adminBindFoodImageURL: (foodId: number, url: string, token: string) =>
     apiClient.patch<unknown, AdminUploadResponse>(`/admin/foods/${foodId}/image`, { url }, {
+      headers: { 'X-Admin-Token': token },
+    }),
+
+  adminBindAchievementBadgeURL: (achievementId: number, url: string, token: string) =>
+    apiClient.patch<unknown, AdminUploadResponse>(`/admin/achievements/${achievementId}/badge`, { url }, {
       headers: { 'X-Admin-Token': token },
     }),
 

@@ -266,7 +266,7 @@ func successfulTask3CityRepository() *task3CityRepository {
 			return &model.City{ID: 3, Name: "西安", Province: "陕西", Lat: 34.3416, Lng: 108.9398}, nil
 		},
 		listTags: func(context.Context, int64) ([]model.CityTag, error) {
-			return []model.CityTag{{CityID: 3, Tag: "ancient_capital"}}, nil
+			return []model.CityTag{{CityID: 3, Tag: "古都"}}, nil
 		},
 		listLandmarks: func(context.Context, int64) ([]model.Landmark, error) {
 			return []model.Landmark{{ID: 12, CityID: 3, Name: "兵马俑"}}, nil

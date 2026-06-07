@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/your-org/city-roam/backend/internal/model"
 	"gorm.io/gorm"
@@ -37,6 +38,12 @@ func (r *AdminRepo) ListTags(ctx context.Context, cityID int64) ([]model.CityTag
 	return tags, err
 }
 
+func (r *AdminRepo) ListAllTags(ctx context.Context) ([]model.CityTag, error) {
+	var tags []model.CityTag
+	err := r.DB.WithContext(ctx).Order("tag ASC, city_id ASC").Find(&tags).Error
+	return tags, err
+}
+
 func (r *AdminRepo) ListLandmarks(ctx context.Context, cityID int64) ([]model.Landmark, error) {
 	var rows []model.Landmark
 	err := r.DB.WithContext(ctx).Where("city_id = ?", cityID).Order("id ASC").Find(&rows).Error
@@ -65,6 +72,73 @@ func (r *AdminRepo) CreateFood(ctx context.Context, row *model.Food) error {
 
 func (r *AdminRepo) CreateCharacter(ctx context.Context, row *model.Character) error {
 	return r.DB.WithContext(ctx).Create(row).Error
+}
+
+func (r *AdminRepo) ListAchievements(ctx context.Context) ([]model.Achievement, error) {
+	var rows []model.Achievement
+	err := r.DB.WithContext(ctx).Order("id ASC").Find(&rows).Error
+	return rows, err
+}
+
+func (r *AdminRepo) CreateAchievement(ctx context.Context, row *model.Achievement) error {
+	return r.DB.WithContext(ctx).Create(row).Error
+}
+
+func (r *AdminRepo) UpdateAchievement(ctx context.Context, id int64, fields map[string]any) error {
+	return updateByID[model.Achievement](ctx, r.DB, id, fields)
+}
+
+func (r *AdminRepo) DeleteAchievement(ctx context.Context, id int64) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var row model.Achievement
+		if err := tx.First(&row, id).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("achievement_id = ?", id).Delete(&model.UserAchievement{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&row).Error
+	})
+}
+
+func (r *AdminRepo) RenameTag(ctx context.Context, oldTag, newTag string) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var rows []model.CityTag
+		if err := tx.Where("tag = ?", oldTag).Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		for _, row := range rows {
+			var existing model.CityTag
+			err := tx.Where("city_id = ? AND tag = ?", row.CityID, newTag).First(&existing).Error
+			switch {
+			case err == nil:
+				if err := tx.Delete(&row).Error; err != nil {
+					return err
+				}
+			case err != nil && !isRecordNotFound(err):
+				return err
+			default:
+				if err := tx.Model(&model.CityTag{}).Where("id = ?", row.ID).Update("tag", newTag).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return renameAchievementRuleTags(tx, oldTag, newTag)
+	})
+}
+
+func (r *AdminRepo) DeleteTag(ctx context.Context, tag string) error {
+	result := r.DB.WithContext(ctx).Where("tag = ?", tag).Delete(&model.CityTag{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (r *AdminRepo) UpdateCity(ctx context.Context, id int64, fields map[string]any, tags *[]string) error {
@@ -139,4 +213,41 @@ func deleteByID[T any](ctx context.Context, db *gorm.DB, id int64, targetType st
 		}
 		return tx.Where("target_type = ? AND target_id = ?", targetType, id).Delete(&model.Comment{}).Error
 	})
+}
+
+func renameAchievementRuleTags(tx *gorm.DB, oldTag, newTag string) error {
+	var rows []model.Achievement
+	if err := tx.Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		next := renamedRuleValue(row.RuleType, row.RuleValue, oldTag, newTag)
+		if next == row.RuleValue {
+			continue
+		}
+		if err := tx.Model(&model.Achievement{}).Where("id = ?", row.ID).Update("rule_value", next).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func renamedRuleValue(ruleType, ruleValue, oldTag, newTag string) string {
+	switch ruleType {
+	case "city_tag":
+		if ruleValue == oldTag {
+			return newTag
+		}
+	case "tag_count":
+		for i := len(ruleValue) - 1; i >= 0; i-- {
+			if ruleValue[i] == ':' && ruleValue[:i] == oldTag {
+				return newTag + ruleValue[i:]
+			}
+		}
+	}
+	return ruleValue
+}
+
+func isRecordNotFound(err error) bool {
+	return errors.Is(err, gorm.ErrRecordNotFound)
 }

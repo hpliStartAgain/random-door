@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -35,7 +36,7 @@ func main() {
 }
 
 func run() error {
-	mode := flag.String("mode", "audit", "audit, bootstrap, or sync")
+	mode := flag.String("mode", "audit", "audit, bootstrap, sync, normalize-tags, or backfill-landmark-coordinates")
 	confirmOverwrite := flag.Bool("confirm-overwrite", false, "required with -mode sync because it overwrites matching catalog rows")
 	flag.Parse()
 
@@ -77,8 +78,19 @@ func run() error {
 		}
 		fmt.Printf("seed sync completed from %s\n", cfg.Server.SeedDir)
 		return nil
+	case "normalize-tags":
+		return normalizeCatalogTags(ctx, db)
+	case "backfill-landmark-coordinates":
+		catalog, err := seed.LoadCatalog(cfg.Server.SeedDir)
+		if err != nil {
+			return err
+		}
+		if err := db.AutoMigrate(&model.Landmark{}); err != nil {
+			return fmt.Errorf("auto migrate landmarks: %w", err)
+		}
+		return backfillLandmarkCoordinates(ctx, db, catalog)
 	default:
-		return fmt.Errorf("unsupported mode %q (want audit, bootstrap, or sync)", *mode)
+		return fmt.Errorf("unsupported mode %q (want audit, bootstrap, sync, normalize-tags, or backfill-landmark-coordinates)", *mode)
 	}
 }
 
@@ -358,4 +370,201 @@ func dbNaturalKeys(ctx context.Context, db *gorm.DB) (map[string]map[string]bool
 
 func scopedKey(scope string, name string) string {
 	return scope + "/" + name
+}
+
+var tagTranslations = map[string]string{
+	"ancient_capital": "古都",
+	"northwest":       "西北",
+	"spicy_food":      "美食",
+	"jiangnan":        "江南",
+	"lingnan":         "岭南",
+	"coastal":         "沿海",
+	"modern_city":     "现代都市",
+	"dongbei":         "东北",
+	"north_china":     "华北",
+	"canal_city":      "运河",
+	"water_town":      "水乡",
+	"southwest":       "西南",
+	"ethnic_culture":  "民族风情",
+	"plateau":         "高原",
+	"port":            "港口",
+	"maritime":        "海洋文化",
+	"silk_road":       "丝路",
+	"desert":          "大漠",
+	"food_city":       "美食之城",
+	"dim_sum":         "广府点心",
+	"historic":        "历史名城",
+	"ancient_wall":    "古城墙",
+	"heritage":        "文化遗产",
+	"bai_culture":     "白族文化",
+	"central_china":   "中原",
+	"grassland":       "草原",
+	"jianghuai":       "江淮",
+	"landscape":       "山水",
+	"minnan":          "闽南",
+	"river_city":      "江河城市",
+	"spring_city":     "泉城",
+	"wuyue":           "吴越",
+}
+
+func normalizeCatalogTags(ctx context.Context, db *gorm.DB) error {
+	var tagRows []model.CityTag
+	if err := db.WithContext(ctx).Find(&tagRows).Error; err != nil {
+		return err
+	}
+	beforeTags := distinctCityTags(tagRows)
+
+	translated := 0
+	deleted := 0
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, row := range tagRows {
+			next, mapped := tagTranslations[row.Tag]
+			switch {
+			case mapped:
+				var existing model.CityTag
+				err := tx.Where("city_id = ? AND tag = ?", row.CityID, next).First(&existing).Error
+				if err == nil {
+					if err := tx.Delete(&row).Error; err != nil {
+						return err
+					}
+					deleted++
+					continue
+				}
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				}
+				if err := tx.Model(&model.CityTag{}).Where("id = ?", row.ID).Update("tag", next).Error; err != nil {
+					return err
+				}
+				translated++
+			case hasASCIIAlpha(row.Tag):
+				if err := tx.Delete(&row).Error; err != nil {
+					return err
+				}
+				deleted++
+			}
+		}
+		return normalizeAchievementRuleTags(tx)
+	}); err != nil {
+		return err
+	}
+
+	var afterRows []model.CityTag
+	if err := db.WithContext(ctx).Find(&afterRows).Error; err != nil {
+		return err
+	}
+	afterTags := distinctCityTags(afterRows)
+	fmt.Printf("tag normalization completed: translated=%d deleted=%d\n", translated, deleted)
+	printNameList("tags before", beforeTags)
+	printNameList("tags after", afterTags)
+	return nil
+}
+
+func backfillLandmarkCoordinates(ctx context.Context, db *gorm.DB, catalog seed.Catalog) error {
+	var updated, skipped, missing int
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, city := range catalog.Cities {
+			var dbCity model.City
+			err := tx.Where("name = ?", city.Name).First(&dbCity).Error
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				missing += len(city.Landmarks)
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			for _, landmark := range city.Landmarks {
+				if landmark.Lat == nil || landmark.Lng == nil {
+					skipped++
+					continue
+				}
+				var row model.Landmark
+				err := tx.Where("city_id = ? AND name = ?", dbCity.ID, landmark.Name).First(&row).Error
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					missing++
+					continue
+				}
+				if err != nil {
+					return err
+				}
+				if row.Lat != nil && row.Lng != nil && *row.Lat != 0 && *row.Lng != 0 {
+					skipped++
+					continue
+				}
+				if err := tx.Model(&row).Updates(map[string]any{
+					"lat": *landmark.Lat,
+					"lng": *landmark.Lng,
+				}).Error; err != nil {
+					return err
+				}
+				updated++
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	fmt.Printf("landmark coordinate backfill completed: updated=%d skipped=%d missing=%d\n", updated, skipped, missing)
+	return nil
+}
+
+func normalizeAchievementRuleTags(tx *gorm.DB) error {
+	var rows []model.Achievement
+	if err := tx.Find(&rows).Error; err != nil {
+		return err
+	}
+	updated := 0
+	for _, row := range rows {
+		next := translatedRuleValue(row.RuleType, row.RuleValue)
+		if next == row.RuleValue {
+			continue
+		}
+		if err := tx.Model(&model.Achievement{}).Where("id = ?", row.ID).Update("rule_value", next).Error; err != nil {
+			return err
+		}
+		updated++
+	}
+	fmt.Printf("achievement rule tags updated=%d\n", updated)
+	return nil
+}
+
+func translatedRuleValue(ruleType, ruleValue string) string {
+	switch ruleType {
+	case "city_tag":
+		if next, ok := tagTranslations[ruleValue]; ok {
+			return next
+		}
+	case "tag_count":
+		for i := len(ruleValue) - 1; i >= 0; i-- {
+			if ruleValue[i] == ':' {
+				if next, ok := tagTranslations[ruleValue[:i]]; ok {
+					return next + ruleValue[i:]
+				}
+				break
+			}
+		}
+	}
+	return ruleValue
+}
+
+func distinctCityTags(rows []model.CityTag) []string {
+	set := make(map[string]bool)
+	for _, row := range rows {
+		set[row.Tag] = true
+	}
+	tags := make([]string, 0, len(set))
+	for tag := range set {
+		tags = append(tags, tag)
+	}
+	sort.Strings(tags)
+	return tags
+}
+
+func hasASCIIAlpha(value string) bool {
+	for _, r := range value {
+		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') {
+			return true
+		}
+	}
+	return false
 }

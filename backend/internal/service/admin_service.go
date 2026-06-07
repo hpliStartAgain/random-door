@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,12 +21,19 @@ type adminRepo interface {
 	ListCities(ctx context.Context) ([]model.City, error)
 	FindCityByID(ctx context.Context, id int64) (*model.City, error)
 	ListTags(ctx context.Context, cityID int64) ([]model.CityTag, error)
+	ListAllTags(ctx context.Context) ([]model.CityTag, error)
 	ListLandmarks(ctx context.Context, cityID int64) ([]model.Landmark, error)
 	ListFoods(ctx context.Context, cityID int64) ([]model.Food, error)
 	ListCharacters(ctx context.Context, cityID int64) ([]model.Character, error)
 	CreateLandmark(ctx context.Context, row *model.Landmark) error
 	CreateFood(ctx context.Context, row *model.Food) error
 	CreateCharacter(ctx context.Context, row *model.Character) error
+	ListAchievements(ctx context.Context) ([]model.Achievement, error)
+	CreateAchievement(ctx context.Context, row *model.Achievement) error
+	UpdateAchievement(ctx context.Context, id int64, fields map[string]any) error
+	DeleteAchievement(ctx context.Context, id int64) error
+	RenameTag(ctx context.Context, oldTag, newTag string) error
+	DeleteTag(ctx context.Context, tag string) error
 	UpdateCity(ctx context.Context, id int64, fields map[string]any, tags *[]string) error
 	UpdateLandmark(ctx context.Context, id int64, fields map[string]any) error
 	UpdateFood(ctx context.Context, id int64, fields map[string]any) error
@@ -69,6 +78,41 @@ type CoverageItem struct {
 	MissingFields  []string `json:"missing_fields"`
 }
 
+type TagListResult struct {
+	Tags []TagItem `json:"tags"`
+}
+
+type TagItem struct {
+	Tag       string `json:"tag"`
+	CityCount int    `json:"city_count"`
+}
+
+type RenameTagRequest struct {
+	Tag string `json:"tag"`
+}
+
+type AchievementListResult struct {
+	Achievements []model.Achievement `json:"achievements"`
+}
+
+type CreateAchievementRequest struct {
+	Code        string  `json:"code"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	RuleType    string  `json:"rule_type"`
+	RuleValue   string  `json:"rule_value"`
+	BadgeURL    *string `json:"badge_url"`
+}
+
+type UpdateAchievementRequest struct {
+	Code        *string `json:"code"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	RuleType    *string `json:"rule_type"`
+	RuleValue   *string `json:"rule_value"`
+	BadgeURL    *string `json:"badge_url"`
+}
+
 func (s *AdminService) Coverage(ctx context.Context) (*CatalogCoverage, error) {
 	cities, err := s.repo.ListCities(ctx)
 	if err != nil {
@@ -111,6 +155,119 @@ func (s *AdminService) Coverage(ctx context.Context) (*CatalogCoverage, error) {
 	return result, nil
 }
 
+func (s *AdminService) ListTags(ctx context.Context) (*TagListResult, error) {
+	rows, err := s.repo.ListAllTags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list all tags: %w", err)
+	}
+	counts := make(map[string]map[int64]bool)
+	for _, row := range rows {
+		tag := strings.TrimSpace(row.Tag)
+		if tag == "" {
+			continue
+		}
+		if counts[tag] == nil {
+			counts[tag] = make(map[int64]bool)
+		}
+		counts[tag][row.CityID] = true
+	}
+	tags := make([]TagItem, 0, len(counts))
+	for tag, cities := range counts {
+		tags = append(tags, TagItem{Tag: tag, CityCount: len(cities)})
+	}
+	sort.Slice(tags, func(i, j int) bool {
+		if tags[i].CityCount == tags[j].CityCount {
+			return tags[i].Tag < tags[j].Tag
+		}
+		return tags[i].CityCount > tags[j].CityCount
+	})
+	return &TagListResult{Tags: tags}, nil
+}
+
+func (s *AdminService) RenameTag(ctx context.Context, oldTag string, req RenameTagRequest) error {
+	oldTag, err := normalizeTag(oldTag)
+	if err != nil {
+		return err
+	}
+	newTag, err := normalizeTag(req.Tag)
+	if err != nil {
+		return err
+	}
+	if oldTag == newTag {
+		return nil
+	}
+	if err := s.repo.RenameTag(ctx, oldTag, newTag); err != nil {
+		return classifyAdminRepoError(err, "tag not found")
+	}
+	return nil
+}
+
+func (s *AdminService) DeleteTag(ctx context.Context, tag string) error {
+	tag, err := normalizeTag(tag)
+	if err != nil {
+		return err
+	}
+	achievements, err := s.repo.ListAchievements(ctx)
+	if err != nil {
+		return fmt.Errorf("list achievements: %w", err)
+	}
+	for _, ach := range achievements {
+		if achievementUsesTag(ach, tag) {
+			return conflict("tag is used by achievements")
+		}
+	}
+	if err := s.repo.DeleteTag(ctx, tag); err != nil {
+		return classifyAdminRepoError(err, "tag not found")
+	}
+	return nil
+}
+
+func (s *AdminService) ListAchievements(ctx context.Context) (*AchievementListResult, error) {
+	rows, err := s.repo.ListAchievements(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list achievements: %w", err)
+	}
+	return &AchievementListResult{Achievements: rows}, nil
+}
+
+func (s *AdminService) CreateAchievement(ctx context.Context, req CreateAchievementRequest) (*model.Achievement, error) {
+	row, err := createAchievementRow(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.CreateAchievement(ctx, row); err != nil {
+		return nil, classifyCreateError(err, "achievement already exists")
+	}
+	return row, nil
+}
+
+func (s *AdminService) UpdateAchievement(ctx context.Context, id int64, req UpdateAchievementRequest) error {
+	if id <= 0 {
+		return invalidParam("achievement_id must be a positive integer")
+	}
+	fields, err := achievementUpdateFields(req)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.UpdateAchievement(ctx, id, fields); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return notFound("achievement not found")
+		}
+		return classifyCreateError(err, "achievement already exists")
+	}
+	return nil
+}
+
+func (s *AdminService) DeleteAchievement(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return invalidParam("achievement_id must be a positive integer")
+	}
+	if err := s.repo.DeleteAchievement(ctx, id); err != nil {
+		return classifyAdminRepoError(err, "achievement not found")
+	}
+	return nil
+}
+
 type UpdateCityRequest struct {
 	Name               *string   `json:"name"`
 	Province           *string   `json:"province"`
@@ -124,15 +281,19 @@ type UpdateCityRequest struct {
 }
 
 type UpdatePOIRequest struct {
-	Name        *string `json:"name"`
-	ImageURL    *string `json:"image_url"`
-	Description *string `json:"description"`
+	Name        *string  `json:"name"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
+	ImageURL    *string  `json:"image_url"`
+	Description *string  `json:"description"`
 }
 
 type CreatePOIRequest struct {
-	Name        string  `json:"name"`
-	ImageURL    *string `json:"image_url"`
-	Description *string `json:"description"`
+	Name        string   `json:"name"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
+	ImageURL    *string  `json:"image_url"`
+	Description *string  `json:"description"`
 }
 
 type UpdateCharacterRequest struct {
@@ -198,14 +359,17 @@ func (s *AdminService) UpdateCity(ctx context.Context, id int64, req UpdateCityR
 }
 
 func (s *AdminService) CreateLandmark(ctx context.Context, cityID int64, req CreatePOIRequest) (*model.Landmark, error) {
-	fields, err := createPOIFields(req)
+	fields, err := createLandmarkFields(req)
 	if err != nil {
 		return nil, err
 	}
 	if err := s.ensureCity(ctx, cityID); err != nil {
 		return nil, err
 	}
-	row := &model.Landmark{CityID: cityID, Name: fields.name, ImageURL: fields.imageURL, Description: fields.description}
+	row := &model.Landmark{
+		CityID: cityID, Name: fields.name, Lat: fields.lat, Lng: fields.lng,
+		ImageURL: fields.imageURL, Description: fields.description,
+	}
 	if err := s.repo.CreateLandmark(ctx, row); err != nil {
 		return nil, classifyCreateError(err, "landmark already exists")
 	}
@@ -213,7 +377,7 @@ func (s *AdminService) CreateLandmark(ctx context.Context, cityID int64, req Cre
 }
 
 func (s *AdminService) UpdateLandmark(ctx context.Context, id int64, req UpdatePOIRequest) error {
-	fields, err := poiFields(req)
+	fields, err := landmarkFields(req)
 	if err != nil {
 		return err
 	}
@@ -415,8 +579,23 @@ func (s *AdminService) ensureCity(ctx context.Context, cityID int64) error {
 
 type poiCreateFields struct {
 	name        string
+	lat         *float64
+	lng         *float64
 	imageURL    *string
 	description *string
+}
+
+func createLandmarkFields(req CreatePOIRequest) (poiCreateFields, error) {
+	fields, err := createPOIFields(req)
+	if err != nil {
+		return poiCreateFields{}, err
+	}
+	if err := validateOptionalCoordinates(req.Lat, req.Lng); err != nil {
+		return poiCreateFields{}, err
+	}
+	fields.lat = req.Lat
+	fields.lng = req.Lng
+	return fields, nil
 }
 
 func createPOIFields(req CreatePOIRequest) (poiCreateFields, error) {
@@ -430,6 +609,197 @@ func createPOIFields(req CreatePOIRequest) (poiCreateFields, error) {
 		}
 	}
 	return poiCreateFields{name: name, imageURL: req.ImageURL, description: req.Description}, nil
+}
+
+func createAchievementRow(req CreateAchievementRequest) (*model.Achievement, error) {
+	code, err := normalizeCode(req.Code)
+	if err != nil {
+		return nil, err
+	}
+	name, err := normalizeRequiredText("name", req.Name, 128)
+	if err != nil {
+		return nil, err
+	}
+	ruleType := strings.TrimSpace(req.RuleType)
+	ruleValue := strings.TrimSpace(req.RuleValue)
+	if err := validateAchievementRule(ruleType, ruleValue); err != nil {
+		return nil, err
+	}
+	if req.BadgeURL != nil && strings.TrimSpace(*req.BadgeURL) != "" {
+		if err := validateLocalImageURL(*req.BadgeURL); err != nil {
+			return nil, err
+		}
+	}
+	return &model.Achievement{
+		Code:        code,
+		Name:        name,
+		Description: trimOptionalText(req.Description),
+		RuleType:    ruleType,
+		RuleValue:   ruleValue,
+		BadgeURL:    trimOptionalText(req.BadgeURL),
+	}, nil
+}
+
+func achievementUpdateFields(req UpdateAchievementRequest) (map[string]any, error) {
+	fields := map[string]any{}
+	if req.Code != nil {
+		code, err := normalizeCode(*req.Code)
+		if err != nil {
+			return nil, err
+		}
+		fields["code"] = code
+	}
+	if req.Name != nil {
+		name, err := normalizeRequiredText("name", *req.Name, 128)
+		if err != nil {
+			return nil, err
+		}
+		fields["name"] = name
+	}
+	if req.Description != nil {
+		fields["description"] = strings.TrimSpace(*req.Description)
+	}
+	if req.BadgeURL != nil {
+		badgeURL := strings.TrimSpace(*req.BadgeURL)
+		if badgeURL != "" {
+			if err := validateLocalImageURL(badgeURL); err != nil {
+				return nil, err
+			}
+		}
+		fields["badge_url"] = badgeURL
+	}
+	if req.RuleType != nil || req.RuleValue != nil {
+		if req.RuleType == nil || req.RuleValue == nil {
+			return nil, invalidParam("rule_type and rule_value must be updated together")
+		}
+		ruleType := strings.TrimSpace(*req.RuleType)
+		ruleValue := strings.TrimSpace(*req.RuleValue)
+		if err := validateAchievementRule(ruleType, ruleValue); err != nil {
+			return nil, err
+		}
+		fields["rule_type"] = ruleType
+		fields["rule_value"] = ruleValue
+	}
+	return fields, nil
+}
+
+func normalizeTag(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", invalidParam("tag must not be empty")
+	}
+	if len([]rune(value)) > 64 {
+		return "", invalidParam("tag must be at most 64 characters")
+	}
+	return value, nil
+}
+
+func normalizeCode(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", invalidParam("code is required")
+	}
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			continue
+		}
+		return "", invalidParam("code must contain only letters, numbers, underscores, or hyphens")
+	}
+	if len(value) > 64 {
+		return "", invalidParam("code must be at most 64 characters")
+	}
+	return value, nil
+}
+
+func normalizeRequiredText(field, value string, max int) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", invalidParam(field + " is required")
+	}
+	if len([]rune(value)) > max {
+		return "", invalidParam(fmt.Sprintf("%s must be at most %d characters", field, max))
+	}
+	return value, nil
+}
+
+func trimOptionalText(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func validateAchievementRule(ruleType, ruleValue string) error {
+	switch ruleType {
+	case "first_checkin":
+		if ruleValue != "" {
+			return invalidParam("first_checkin rule_value must be empty")
+		}
+	case "checkin_count", "visit_count", "game_visit_count", "dice_distance":
+		n, err := strconv.Atoi(ruleValue)
+		if err != nil || n <= 0 {
+			return invalidParam(ruleType + " rule_value must be a positive integer")
+		}
+	case "city_tag":
+		if _, err := normalizeTag(ruleValue); err != nil {
+			return err
+		}
+	case "tag_count":
+		tag, count, ok := splitRulePair(ruleValue)
+		if !ok || tag == "" || count <= 0 {
+			return invalidParam("tag_count rule_value must be tag:count")
+		}
+	case "dice_direction":
+		direction, count, ok := splitRulePair(ruleValue)
+		if !ok || count <= 0 {
+			return invalidParam("dice_direction rule_value must be direction:count")
+		}
+		if !isDiceDirection(direction) {
+			return invalidParam("unsupported dice direction")
+		}
+	default:
+		return invalidParam("unsupported rule_type")
+	}
+	return nil
+}
+
+func splitRulePair(value string) (string, int, bool) {
+	for i := len(value) - 1; i >= 0; i-- {
+		if value[i] != ':' {
+			continue
+		}
+		n, err := strconv.Atoi(value[i+1:])
+		if err != nil {
+			return "", 0, false
+		}
+		return strings.TrimSpace(value[:i]), n, true
+	}
+	return "", 0, false
+}
+
+func isDiceDirection(value string) bool {
+	switch value {
+	case "北", "东北", "东", "东南", "南", "西南", "西", "西北":
+		return true
+	default:
+		return false
+	}
+}
+
+func achievementUsesTag(ach model.Achievement, tag string) bool {
+	switch ach.RuleType {
+	case "city_tag":
+		return ach.RuleValue == tag
+	case "tag_count":
+		ruleTag, _, ok := splitRulePair(ach.RuleValue)
+		return ok && ruleTag == tag
+	default:
+		return false
+	}
 }
 
 func coverageMissingFields(city model.City, tags []model.CityTag, landmarks []model.Landmark, foods []model.Food, characters []model.Character) []string {
@@ -459,7 +829,8 @@ func coverageMissingFields(city model.City, tags []model.CityTag, landmarks []mo
 		missing = append(missing, "landmarks")
 	}
 	for _, landmark := range landmarks {
-		if !isLocalAsset(landmark.ImageURL) || strings.TrimSpace(landmark.Name) == "" || isBlankPtr(landmark.Description) {
+		if !isLocalAsset(landmark.ImageURL) || strings.TrimSpace(landmark.Name) == "" ||
+			isBlankPtr(landmark.Description) || landmark.Lat == nil || landmark.Lng == nil {
 			missing = append(missing, "landmark:"+landmark.Name)
 			break
 		}
@@ -497,6 +868,39 @@ func poiFields(req UpdatePOIRequest) (map[string]any, error) {
 		fields["image_url"] = *req.ImageURL
 	}
 	return fields, nil
+}
+
+func landmarkFields(req UpdatePOIRequest) (map[string]any, error) {
+	fields, err := poiFields(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateOptionalCoordinates(req.Lat, req.Lng); err != nil {
+		return nil, err
+	}
+	if req.Lat != nil {
+		fields["lat"] = *req.Lat
+	}
+	if req.Lng != nil {
+		fields["lng"] = *req.Lng
+	}
+	return fields, nil
+}
+
+func validateOptionalCoordinates(lat, lng *float64) error {
+	if lat == nil && lng == nil {
+		return nil
+	}
+	if lat == nil || lng == nil {
+		return invalidParam("lat and lng must be provided together")
+	}
+	if *lat < -90 || *lat > 90 {
+		return invalidParam("lat out of range")
+	}
+	if *lng < -180 || *lng > 180 {
+		return invalidParam("lng out of range")
+	}
+	return nil
 }
 
 func addStringField(fields map[string]any, key string, value *string) {

@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/your-org/city-roam/backend/internal/model"
 	"github.com/your-org/city-roam/backend/internal/service"
+	"gorm.io/gorm"
 )
 
 type handlerProfileRepo struct {
@@ -19,6 +20,14 @@ type handlerProfileRepo struct {
 
 func (r *handlerProfileRepo) FindByID(context.Context, int64) (*model.User, error) {
 	return r.user, nil
+}
+
+func (r *handlerProfileRepo) FindByUsername(context.Context, string) (*model.User, error) {
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (r *handlerProfileRepo) Create(context.Context, *model.User) error {
+	return nil
 }
 
 func (r *handlerProfileRepo) UpdateProfile(_ context.Context, _ int64, fields map[string]any) error {
@@ -32,6 +41,10 @@ func (r *handlerProfileRepo) UpdateProfile(_ context.Context, _ int64, fields ma
 		r.user.HomeRegion = &v
 	}
 	return nil
+}
+
+func (r *handlerProfileRepo) UpdateAccount(_ context.Context, _ int64, fields map[string]any) error {
+	return r.UpdateProfile(context.Background(), 0, fields)
 }
 
 func TestUserHandlerProfile(t *testing.T) {

@@ -420,12 +420,7 @@ func (s *CheckinService) Create(ctx context.Context, req CreateCheckinRequest) (
 		return nil, fmt.Errorf("create checkin: %w", err)
 	}
 
-	achBriefs := make([]AchievementBrief, 0, len(newAchs))
-	for _, a := range newAchs {
-		achBriefs = append(achBriefs, AchievementBrief{
-			Code: a.Code, Name: a.Name, Description: a.Description,
-		})
-	}
+	achBriefs := briefAchievements(newAchs)
 
 	slog.Info("checkin created", "user_id", req.UserID, "city_id", req.CityID,
 		"checkin_id", checkin.ID, "new_achievements", len(newAchs))

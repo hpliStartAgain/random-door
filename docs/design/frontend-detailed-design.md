@@ -37,7 +37,7 @@ frontend/src/
 ## 2. components（13 个）
 | 组件 | props（关键） | 职责/交互 |
 |---|---|---|
-| MapCanvas | cities, onCityClick, mode, movePath? | **唯一封装高德 SDK**；打 Marker；游戏模式播放移动动画 |
+| MapCanvas | cities, onCityClick, mode, movePath? | **唯一封装高德 SDK**；打城市/地标 Marker；点击 marker 进入对应城市详情；游戏模式播放移动动画 |
 | CityMarker | city, onClick | 地图标记（也可由 MapCanvas 内部生成） |
 | DicePanel | onRoll, rolling, result | 掷骰按钮 + 动画 + 显示方向/距离 |
 | CityCard | city | 城市简介卡；发现页列表项展示 landmark_count/food_count/character_count 信息密度（CityListItem，缺字段按 0） |
@@ -71,14 +71,14 @@ frontend/src/
 | checkin.ts | generateImage(form)、createCheckin(payload) |
 | achievement.ts | getAchievements(userId) |
 | guess.ts | generateGuessCaption()、createGuessChallenge()、getGuessChallenge()、answerGuessChallenge() |
-| user.ts | getUserProfile()、updateUserProfile() |
+| user.ts | register()、login()、getUserProfile()、updateUserProfile() |
 
 ---
 
 ## 4. store（Zustand，3 个）
 | store | 状态 | 动作 |
 |---|---|---|
-| useUserStore | userId, anonymousId, currentCityId | initUser()（读 localStorage，无则建匿名用户并存） |
+| useUserStore | userId, anonymousId, username, nickname, currentCityId | initUser()（读 localStorage，无则建匿名用户并存）、register()、login()、logout() |
 | useGameStore | fromCity, lastRoll, targetCity, rolling | setInit、roll、reset |
 | useCityStore | cities[], cityCache{}, searchQuery, activeRegion, activeTag | loadCities()、loadCity(id)（带缓存）、筛选状态 |
 | useViewStore | currentView, canvasMode, streetTarget, drawer, profileOpen | 视图切换、街景目标、右抽屉、个人面板开关 |

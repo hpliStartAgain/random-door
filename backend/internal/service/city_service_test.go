@@ -65,7 +65,7 @@ func TestCityServiceList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List() error = %v", err)
 	}
-	if len(cities) != 1 || cities[0].Name != "北京" || len(cities[0].Tags) != 1 || cities[0].Tags[0] != "ancient_capital" {
+	if len(cities) != 1 || cities[0].Name != "北京" || len(cities[0].Tags) != 1 || cities[0].Tags[0] != "古都" {
 		t.Fatalf("List() = %#v, want city with tags", cities)
 	}
 	if cities[0].LandmarkCount != 2 || cities[0].FoodCount != 2 || cities[0].CharacterCount != 1 {
@@ -150,6 +150,8 @@ func detailCityRepository() *fakeCityRepository {
 	imageURL := "/static/image.jpg"
 	description := "description"
 	style := "京腔"
+	lat := 39.9163
+	lng := 116.3972
 	return &fakeCityRepository{
 		listAll: func(context.Context) ([]model.City, error) {
 			return nil, nil
@@ -158,10 +160,10 @@ func detailCityRepository() *fakeCityRepository {
 			return &model.City{ID: 1, Name: "北京", Province: "北京", Lat: 39.9042, Lng: 116.4074}, nil
 		},
 		listTags: func(context.Context, int64) ([]model.CityTag, error) {
-			return []model.CityTag{{CityID: 1, Tag: "ancient_capital"}}, nil
+			return []model.CityTag{{CityID: 1, Tag: "古都"}}, nil
 		},
 		listLandmarks: func(context.Context, int64) ([]model.Landmark, error) {
-			return []model.Landmark{{ID: 1, CityID: 1, Name: "故宫", ImageURL: &imageURL, Description: &description}}, nil
+			return []model.Landmark{{ID: 1, CityID: 1, Name: "故宫", Lat: &lat, Lng: &lng, ImageURL: &imageURL, Description: &description}}, nil
 		},
 		listFoods: func(context.Context, int64) ([]model.Food, error) {
 			return []model.Food{{ID: 1, CityID: 1, Name: "烤鸭", ImageURL: &imageURL, Description: &description}}, nil

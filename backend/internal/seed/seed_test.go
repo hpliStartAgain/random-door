@@ -51,6 +51,9 @@ func TestLoadCatalog(t *testing.T) {
 	soundscapeCount := 0
 	for _, city := range catalog.Cities {
 		for _, landmark := range city.Landmarks {
+			if landmark.Lat == nil || landmark.Lng == nil {
+				t.Fatalf("city %q landmark %q missing coordinates", city.Name, landmark.Name)
+			}
 			if landmark.SoundscapeURL != "" {
 				soundscapeCount++
 			}
@@ -75,7 +78,7 @@ func TestValidateCatalogRejectsImpossibleTagAchievement(t *testing.T) {
 	catalog := mustLoadCatalog(t)
 	for i := range catalog.Achievements {
 		if catalog.Achievements[i].RuleType == "tag_count" {
-			catalog.Achievements[i].RuleValue = "spicy_food:99"
+			catalog.Achievements[i].RuleValue = "美食:99"
 			break
 		}
 	}

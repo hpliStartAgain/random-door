@@ -67,10 +67,12 @@ type City struct {
 }
 
 type POI struct {
-	Name          string `json:"name"`
-	ImageURL      string `json:"image_url"`
-	Description   string `json:"description"`
-	SoundscapeURL string `json:"soundscape_url"`
+	Name          string   `json:"name"`
+	Lat           *float64 `json:"lat,omitempty"`
+	Lng           *float64 `json:"lng,omitempty"`
+	ImageURL      string   `json:"image_url"`
+	Description   string   `json:"description"`
+	SoundscapeURL string   `json:"soundscape_url"`
 }
 
 type Character struct {
@@ -237,13 +239,13 @@ func validateCity(city City) error {
 	if len(city.Landmarks) < 1 || len(city.Landmarks) > 2 {
 		return fmt.Errorf("city %q must have 1 or 2 landmarks", city.Name)
 	}
-	if err := validatePOIs("landmark", city.Name, city.Landmarks); err != nil {
+	if err := validatePOIs("landmark", city.Name, city.Landmarks, true); err != nil {
 		return err
 	}
 	if len(city.Foods) < 1 || len(city.Foods) > 2 {
 		return fmt.Errorf("city %q must have 1 or 2 foods", city.Name)
 	}
-	if err := validatePOIs("food", city.Name, city.Foods); err != nil {
+	if err := validatePOIs("food", city.Name, city.Foods, false); err != nil {
 		return err
 	}
 	if len(city.Characters) != 1 {
@@ -284,11 +286,19 @@ func validateCity(city City) error {
 	return nil
 }
 
-func validatePOIs(kind, cityName string, pois []POI) error {
+func validatePOIs(kind, cityName string, pois []POI, requireCoordinates bool) error {
 	names := make([]string, 0, len(pois))
 	for _, poi := range pois {
 		if err := requireText(kind+" name", poi.Name); err != nil {
 			return err
+		}
+		if requireCoordinates {
+			if poi.Lat == nil || poi.Lng == nil {
+				return fmt.Errorf("%s %q in city %q must have lat and lng", kind, poi.Name, cityName)
+			}
+			if *poi.Lat < -90 || *poi.Lat > 90 || *poi.Lng < -180 || *poi.Lng > 180 || *poi.Lat == 0 || *poi.Lng == 0 {
+				return fmt.Errorf("%s %q coordinates out of range in city %q", kind, poi.Name, cityName)
+			}
 		}
 		if err := requireStaticURL(kind+" image_url", poi.ImageURL); err != nil {
 			return err
@@ -326,7 +336,7 @@ func validateAchievement(achievement Achievement, tagCityCount map[string]int) e
 		if achievement.RuleValue != "" {
 			return fmt.Errorf("first_checkin rule_value must be empty")
 		}
-	case "checkin_count", "game_visit_count", "dice_distance":
+	case "checkin_count", "visit_count", "game_visit_count", "dice_distance":
 		if _, err := parsePositiveInt(achievement.RuleValue); err != nil {
 			return fmt.Errorf("%s: %w", achievement.RuleType, err)
 		}
@@ -492,13 +502,15 @@ func upsertCity(tx *gorm.DB, source City) error {
 		row := model.Landmark{
 			CityID:        city.ID,
 			Name:          landmark.Name,
+			Lat:           cloneFloat(landmark.Lat),
+			Lng:           cloneFloat(landmark.Lng),
 			ImageURL:      seedAssetURL(existingLandmark.ImageURL, landmark.ImageURL),
 			Description:   ptr(landmark.Description),
 			SoundscapeURL: nilIfEmpty(landmark.SoundscapeURL),
 		}
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "city_id"}, {Name: "name"}},
-			DoUpdates: clause.AssignmentColumns([]string{"image_url", "description", "soundscape_url"}),
+			DoUpdates: clause.AssignmentColumns([]string{"lat", "lng", "image_url", "description", "soundscape_url"}),
 		}).Create(&row).Error; err != nil {
 			return fmt.Errorf("upsert landmark %q for city %q: %w", landmark.Name, source.Name, err)
 		}
@@ -582,6 +594,8 @@ func bootstrapCity(tx *gorm.DB, source City) error {
 		row := model.Landmark{
 			CityID:        city.ID,
 			Name:          landmark.Name,
+			Lat:           cloneFloat(landmark.Lat),
+			Lng:           cloneFloat(landmark.Lng),
 			ImageURL:      ptr(landmark.ImageURL),
 			Description:   ptr(landmark.Description),
 			SoundscapeURL: nilIfEmpty(landmark.SoundscapeURL),
@@ -714,6 +728,14 @@ func seedAssetURL(existing *string, seeded string) *string {
 
 func ptr(value string) *string {
 	return &value
+}
+
+func cloneFloat(value *float64) *float64 {
+	if value == nil {
+		return nil
+	}
+	clone := *value
+	return &clone
 }
 
 func nilIfEmpty(s string) *string {

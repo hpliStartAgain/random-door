@@ -17,7 +17,7 @@ users / cities / city_tags / landmarks / foods / characters / city_visits / dice
 | chat_messages.role | user, assistant |
 | comments.target_type | landmark, food, character |
 | dice_rolls.direction | 北,东北,东,东南,南,西南,西,西北 |
-| achievements.rule_type | first_checkin, checkin_count, city_tag, tag_count, game_visit_count, dice_direction, dice_distance |
+| achievements.rule_type | first_checkin, checkin_count, visit_count, city_tag, tag_count, game_visit_count, dice_direction, dice_distance |
 | ai_tasks.type | checkin_image |
 | ai_tasks.status | queued, running, succeeded, failed, retryable |
 | ai_usage_logs.usage_type | chat, image |
@@ -34,6 +34,8 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 |---|---|---|---|
 | id | BIGINT | PK AI | |
 | anonymous_id | VARCHAR(128) | NOT NULL, UNIQUE | 前端 UUID |
+| username | VARCHAR(64) | NULL, UNIQUE | 简单账号登录名；匿名用户为空 |
+| password_hash | VARCHAR(255) | NULL | bcrypt 哈希；仅后端使用 |
 | nickname | VARCHAR(64) | NULL | |
 | avatar_url | VARCHAR(512) | NULL | |
 | age | INT | NULL | 匿名 profile 年龄 |
@@ -42,7 +44,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | created_at | DATETIME | NOT NULL | |
 | updated_at | DATETIME | NOT NULL | |
 
-**索引**：UNIQUE(anonymous_id), INDEX(current_city_id)。
+**索引**：UNIQUE(anonymous_id), UNIQUE(username), INDEX(current_city_id)。
 
 ---
 
@@ -72,7 +74,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | tag | VARCHAR(64) | NOT NULL |
 | created_at | DATETIME | NOT NULL |
 
-**示例 tag**：ancient_capital, dongbei, jiangnan, wuyue, coastal, spicy_food, modern_city, northwest, lingnan。
+**示例 tag**：古都、东北、江南、沿海、美食、现代都市、西北、岭南、中原、吴越、闽南、山水。
 **索引**：UNIQUE(city_id, tag), INDEX(city_id), INDEX(tag)。
 
 ---
@@ -83,6 +85,8 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | id | BIGINT | PK AI |
 | city_id | BIGINT | NOT NULL, INDEX |
 | name | VARCHAR(128) | NOT NULL |
+| lat | DOUBLE | NULL（地标代表点纬度，用于地图 marker） |
+| lng | DOUBLE | NULL（地标代表点经度，用于地图 marker） |
 | image_url | VARCHAR(512) | NULL（生图参考图） |
 | description | TEXT | NULL |
 | soundscape_url | VARCHAR(512) | NULL（本地 `/static/soundscapes/...`） |
@@ -187,9 +191,10 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 |---|---|---|
 | first_checkin | "" | 任意首次打卡 |
 | checkin_count | "5" | 累计打卡 5 次 |
-| city_tag | "ancient_capital" | 打卡任意该标签城市 |
-| tag_count | "jiangnan:3" | 打卡 3 座该标签城市 |
-| game_visit_count | "5" | 游戏模式打卡 5 城 |
+| visit_count | "5" | 累计到过 5 座城市 |
+| city_tag | "古都" | 到过任意该标签城市 |
+| tag_count | "江南:3" | 到过 3 座该标签城市 |
+| game_visit_count | "5" | 游戏模式到达 5 城 |
 | dice_direction | "北:2" | 连续 2 次掷出该方向 |
 | dice_distance | "1200" | 单次掷出 1200km |
 
@@ -315,9 +320,11 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 
 - `backend/internal/seed` 在写库前完整解析并校验 `cities.json` 与 `achievements.json`。
 - 城市数量允许 12~100 个；演示版 seed 固定为 35 个精选城市。每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
+- 地标 seed 必须含 `lat` / `lng` 代表点；运行中前端地图以数据库坐标打点，不在前端临时调用第三方 POI 检索补业务数据。
 - 地标 `soundscape_url` 可为空；非空时必须是 `/static/soundscapes/...` 本地路径，并确保音频文件存在或演示前补齐。
 - 服务启动默认 `SEED_MODE=off`，不写入 seed；数据库是后台 catalog 的事实源。
 - `bootstrap` 模式在单一事务内只插入缺失行，不更新已有后台内容；适用于空库或人工确认后的补齐。
 - `sync` 模式在单一事务内按自然键覆盖匹配行；仅用于明确需要 seed 覆盖数据库的维护场景，执行前必须先 audit。
 - 自然键：`cities.name`、`city_tags(city_id,tag)`、`landmarks(city_id,name)`、`foods(city_id,name)`、`characters(city_id,name)`、`achievements.code`。
+- 公开标签统一使用中文；历史英文 seed 标签可通过 `go run ./cmd/seedtool -mode normalize-tags` 按 `.env` 数据库配置翻译/清理，并同步成就规则参数。
 - 显式工具：`go run ./cmd/seedtool -mode audit|bootstrap|sync`；`sync` 需额外确认参数。
