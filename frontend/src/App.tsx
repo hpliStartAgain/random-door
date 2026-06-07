@@ -9,7 +9,7 @@ import { RightDrawer } from './components/RightDrawer';
 import { AchievementPage } from './pages/AchievementPage';
 import { AssetPage } from './pages/AssetPage';
 import { WelcomeOverlay } from './components/overlays/WelcomeOverlay';
-import { DiceConsole } from './components/overlays/DiceConsole';
+import { RandomCityModal } from './components/overlays/RandomCityModal';
 import { Toast } from './components/Toast';
 import { AdminPage } from './pages/AdminPage';
 
@@ -45,10 +45,10 @@ function App() {
             </div>
           )}
 
-          {/* 随机漫游骰子台（覆盖在地图区域上方） */}
+          {/* 任意门 — 随机城市弹窗（覆盖在地图区域上方） */}
           {currentView === 'GAME_DICE' && (
             <div className="absolute inset-0 z-20">
-              <DiceConsole />
+              <RandomCityModal />
             </div>
           )}
         </main>

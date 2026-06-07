@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { foxImages } from '../../assets/foxImages';
 
 export interface Achievement {
   code: string;
@@ -68,9 +69,20 @@ export const AchievementUnlock: React.FC<Props> = ({ achievements, onClose }) =>
 
         {/* Card */}
         <div className="relative flex flex-col items-center text-center px-8 py-10 max-w-xs" onClick={e => e.stopPropagation()}>
-          <div className="ach-badge w-24 h-24 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center mb-6 shadow-2xl"
-            style={{ boxShadow: '0 0 60px rgba(194,159,96,0.48)' }}>
-            <span className="text-4xl">🏆</span>
+          <div className="ach-badge relative mb-4">
+            <img
+              src={foxImages.passportStamp}
+              alt="成就印章"
+              className="fox-stamp w-36 h-36 object-contain drop-shadow-2xl"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+              }}
+            />
+            <div className="hidden w-24 h-24 rounded-full bg-gradient-to-br from-accent to-primary items-center justify-center shadow-2xl"
+              style={{ boxShadow: '0 0 60px rgba(194,159,96,0.48)' }}>
+              <span className="text-4xl">🏆</span>
+            </div>
           </div>
 
           <div className="ach-text space-y-2">

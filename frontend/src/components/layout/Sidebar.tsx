@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Dices } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { api } from '../../api';
+import { foxImages } from '../../assets/foxImages';
 import { useCityStore } from '../../store/useCityStore';
 import { useGameStore } from '../../store/useGameStore';
 import { useMapStore } from '../../store/useMapStore';
@@ -8,22 +9,14 @@ import { useUserStore } from '../../store/useUserStore';
 import { useViewStore } from '../../store/useViewStore';
 import { CityDetailPanel } from '../CityDetailPanel';
 
-function SidebarFox() {
+function SidebarFoxDoor() {
   return (
-    <svg viewBox="0 0 96 96" className="h-20 w-20 drop-shadow-lg">
-      <path d="M18 28 L33 15 L37 35 Z" fill="#D47A3C" />
-      <path d="M78 28 L63 15 L59 35 Z" fill="#D47A3C" />
-      <path d="M24 31 C28 15 68 15 72 31 C84 48 75 78 48 82 C21 78 12 48 24 31Z" fill="#E48743" />
-      <path d="M30 32 C37 43 42 55 48 80 C54 55 59 43 66 32 C60 68 36 68 30 32Z" fill="#FFF2D7" opacity="0.96" />
-      <path d="M20 31 L32 20 L35 34 Z" fill="#8D3F28" opacity="0.55" />
-      <path d="M76 31 L64 20 L61 34 Z" fill="#8D3F28" opacity="0.55" />
-      <circle cx="36" cy="47" r="3.8" fill="#22302C" />
-      <circle cx="60" cy="47" r="3.8" fill="#22302C" />
-      <path d="M45 58 Q48 61 51 58" fill="none" stroke="#22302C" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M48 54 L43 59 L53 59 Z" fill="#22302C" />
-      <path d="M17 65 C7 64 7 48 21 46 C34 44 39 57 28 65 C35 67 42 72 48 80 C35 79 24 74 17 65Z" fill="#D87538" />
-      <path d="M18 63 C12 60 14 52 22 52 C28 52 30 58 24 62 C31 64 37 70 41 75 C31 73 23 69 18 63Z" fill="#FFF2D7" opacity="0.92" />
-    </svg>
+    <img
+      src={foxImages.magicDoor}
+      alt="开启任意门"
+      className="h-28 w-28 object-contain fox-float drop-shadow-lg"
+      onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0'; }}
+    />
   );
 }
 
@@ -109,12 +102,12 @@ export const Sidebar: React.FC = () => {
       {/* 头部标题区 */}
       <div className="p-6 pb-2">
         <h2 className="text-2xl font-bold text-primary tracking-tight mb-2">
-          {activeTab === 'explore' ? '探索风物' : '听天由命'}
+          {activeTab === 'explore' ? '探索风物' : '任意门'}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {activeTab === 'explore' 
+          {activeTab === 'explore'
             ? `${cities.length || 0} 处名胜 · 穿越历史的长河`
-            : '掷出命运的骰子，让风带你去往未知的远方'}
+            : '让狐狸为你开启任意门，寻找下一座城市'}
         </p>
       </div>
 
@@ -126,11 +119,11 @@ export const Sidebar: React.FC = () => {
         >
           自由探索
         </button>
-        <button 
+        <button
           onClick={() => { setActiveTab('dice'); setView('GAME_DICE'); }}
           className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${activeTab === 'dice' ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-foreground border-border hover:bg-secondary'}`}
         >
-          随机漫游
+          任意门
         </button>
       </div>
 
@@ -188,20 +181,29 @@ export const Sidebar: React.FC = () => {
           )
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-8 p-4">
-            <div className="w-32 h-32 rounded-full bg-secondary border border-border flex items-center justify-center shadow-inner relative">
-              <SidebarFox />
+            <SidebarFoxDoor />
+
+            <div className="text-center space-y-1 px-2">
+              <div className="text-sm font-semibold text-foreground">听天由命</div>
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                抽取下一站，让命运为你选择
+              </div>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setView('GAME_DICE')}
-              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              className="w-full py-3.5 text-primary-foreground font-bold rounded-2xl flex items-center justify-center gap-2 hover:brightness-95 transition-all"
+              style={{
+                background: 'linear-gradient(135deg,hsl(var(--primary)),hsl(var(--accent)))',
+                boxShadow: '0 14px 32px rgba(43,58,54,0.18)',
+              }}
             >
-              <Dices className="h-4 w-4" />
-              打开命运骰台
+              <Sparkles className="h-4 w-4" />
+              开启任意门
             </button>
-            
+
             {lastRoll && (
-              <p className="text-sm text-center text-muted-foreground">
+              <p className="text-xs text-center text-muted-foreground">
                 上次目的地：{lastRoll.target_city.name} · {lastRoll.direction} {lastRoll.distance_km}km
               </p>
             )}

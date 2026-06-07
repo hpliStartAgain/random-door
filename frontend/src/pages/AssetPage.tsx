@@ -3,6 +3,7 @@ import { api } from '../api';
 import type { UserAssetsResponse } from '../api/types';
 import { useUserStore } from '../store/useUserStore';
 import { useViewStore } from '../store/useViewStore';
+import { foxImages } from '../assets/foxImages';
 
 export const AssetPage: React.FC = () => {
   const { setView } = useViewStore();
@@ -28,7 +29,19 @@ export const AssetPage: React.FC = () => {
         </div>
       </header>
 
-      {loading && <div className="text-sm text-muted-foreground">正在加载资产...</div>}
+      {/* 页头主视觉 */}
+      <div className="flex flex-col items-center mb-10 text-center">
+        <img
+          src={foxImages.postcardBoard}
+          alt="旅行记忆拼贴板"
+          className="w-48 h-36 object-contain fox-float drop-shadow-md mb-4"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+        />
+        <h2 className="font-serif-display text-2xl font-black text-primary mb-1">我的旅行记忆</h2>
+        <p className="text-sm text-muted-foreground">每一座城市，都会变成一张明信片</p>
+      </div>
+
+      {loading && <div className="text-sm text-muted-foreground text-center">正在加载资产...</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <section className="glass-panel p-5 rounded-2xl border border-border">
@@ -39,7 +52,20 @@ export const AssetPage: React.FC = () => {
                 <div className="font-semibold text-sm">{city.name}</div>
                 <div className="text-xs text-muted-foreground">{city.province} · {new Date(city.visited_at).toLocaleDateString()}</div>
               </div>
-            )) : <div className="text-sm text-muted-foreground">还没有城市访问记录</div>}
+            )) : (
+              <div className="flex flex-col items-center py-8 gap-3">
+                <img
+                  src={foxImages.postcardBoard}
+                  alt="暂无记录"
+                  className="w-28 h-20 object-contain opacity-60"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+                <p className="text-sm text-muted-foreground text-center">
+                  还没有城市收藏<br/>
+                  <span className="text-xs">先开启一次任意门吧</span>
+                </p>
+              </div>
+            )}
           </div>
         </section>
 

@@ -3,6 +3,7 @@ import { api } from '../api';
 import { useUserStore } from '../store/useUserStore';
 import { useViewStore } from '../store/useViewStore';
 import type { AchievementWallResponse } from '../api/types';
+import { foxImages } from '../assets/foxImages';
 
 export const AchievementPage: React.FC = () => {
   const { setView } = useViewStore();
@@ -23,6 +24,18 @@ export const AchievementPage: React.FC = () => {
           <span className="mx-4">成就墙</span>
         </div>
       </header>
+
+      {/* 顶部主视觉 */}
+      <div className="flex flex-col items-center mb-10 text-center">
+        <img
+          src={foxImages.passportStamp}
+          alt="狐狸护照印章"
+          className="w-40 h-40 object-contain fox-float drop-shadow-lg mb-4"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+        />
+        <h2 className="font-serif-display text-2xl font-black text-primary mb-1">旅行成就墙</h2>
+        <p className="text-sm text-muted-foreground">每一次打卡，都会在这里留下一枚印章</p>
+      </div>
 
       <div className="glass-panel p-8 rounded-3xl grid grid-cols-2 md:grid-cols-4 gap-6">
         {data?.unlocked.map((ach) => (
