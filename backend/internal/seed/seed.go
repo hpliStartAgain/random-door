@@ -3,6 +3,7 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -372,13 +373,17 @@ func upsertCatalog(tx *gorm.DB, catalog Catalog) error {
 }
 
 func upsertCity(tx *gorm.DB, source City) error {
+	existingCity, err := findExistingCity(tx, source.Name)
+	if err != nil {
+		return fmt.Errorf("load existing city %q: %w", source.Name, err)
+	}
 	city := model.City{
 		Name:               source.Name,
 		Province:           source.Province,
 		Lat:                source.Lat,
 		Lng:                source.Lng,
 		Intro:              ptr(source.Intro),
-		CoverImageURL:      ptr(source.CoverImageURL),
+		CoverImageURL:      seedAssetURL(existingCity.CoverImageURL, source.CoverImageURL),
 		DialectSample:      ptr(source.DialectSample),
 		DialectExplanation: ptr(source.DialectExplanation),
 	}
@@ -402,10 +407,14 @@ func upsertCity(tx *gorm.DB, source City) error {
 		}
 	}
 	for _, landmark := range source.Landmarks {
+		existingLandmark, err := findExistingLandmark(tx, city.ID, landmark.Name)
+		if err != nil {
+			return fmt.Errorf("load existing landmark %q for city %q: %w", landmark.Name, source.Name, err)
+		}
 		row := model.Landmark{
 			CityID:      city.ID,
 			Name:        landmark.Name,
-			ImageURL:    ptr(landmark.ImageURL),
+			ImageURL:    seedAssetURL(existingLandmark.ImageURL, landmark.ImageURL),
 			Description: ptr(landmark.Description),
 		}
 		if err := tx.Clauses(clause.OnConflict{
@@ -416,10 +425,14 @@ func upsertCity(tx *gorm.DB, source City) error {
 		}
 	}
 	for _, food := range source.Foods {
+		existingFood, err := findExistingFood(tx, city.ID, food.Name)
+		if err != nil {
+			return fmt.Errorf("load existing food %q for city %q: %w", food.Name, source.Name, err)
+		}
 		row := model.Food{
 			CityID:      city.ID,
 			Name:        food.Name,
-			ImageURL:    ptr(food.ImageURL),
+			ImageURL:    seedAssetURL(existingFood.ImageURL, food.ImageURL),
 			Description: ptr(food.Description),
 		}
 		if err := tx.Clauses(clause.OnConflict{
@@ -430,11 +443,15 @@ func upsertCity(tx *gorm.DB, source City) error {
 		}
 	}
 	for _, character := range source.Characters {
+		existingCharacter, err := findExistingCharacter(tx, city.ID, character.Name)
+		if err != nil {
+			return fmt.Errorf("load existing character %q for city %q: %w", character.Name, source.Name, err)
+		}
 		row := model.Character{
 			CityID:        city.ID,
 			Name:          character.Name,
 			CharacterType: character.CharacterType,
-			AvatarURL:     ptr(character.AvatarURL),
+			AvatarURL:     seedAssetURL(existingCharacter.AvatarURL, character.AvatarURL),
 			Persona:       character.Persona,
 			DialectStyle:  ptr(character.DialectStyle),
 			Prompt:        character.Prompt,
@@ -449,6 +466,42 @@ func upsertCity(tx *gorm.DB, source City) error {
 		}
 	}
 	return nil
+}
+
+func findExistingCity(tx *gorm.DB, name string) (model.City, error) {
+	var row model.City
+	err := tx.Where("name = ?", name).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return model.City{}, nil
+	}
+	return row, err
+}
+
+func findExistingLandmark(tx *gorm.DB, cityID int64, name string) (model.Landmark, error) {
+	var row model.Landmark
+	err := tx.Where("city_id = ? AND name = ?", cityID, name).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return model.Landmark{}, nil
+	}
+	return row, err
+}
+
+func findExistingFood(tx *gorm.DB, cityID int64, name string) (model.Food, error) {
+	var row model.Food
+	err := tx.Where("city_id = ? AND name = ?", cityID, name).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return model.Food{}, nil
+	}
+	return row, err
+}
+
+func findExistingCharacter(tx *gorm.DB, cityID int64, name string) (model.Character, error) {
+	var row model.Character
+	err := tx.Where("city_id = ? AND name = ?", cityID, name).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return model.Character{}, nil
+	}
+	return row, err
 }
 
 func upsertAchievement(tx *gorm.DB, source Achievement) error {
@@ -469,6 +522,14 @@ func upsertAchievement(tx *gorm.DB, source Achievement) error {
 		return fmt.Errorf("upsert achievement %q: %w", source.Code, err)
 	}
 	return nil
+}
+
+func seedAssetURL(existing *string, seeded string) *string {
+	if existing != nil && strings.HasPrefix(*existing, "/uploads/") {
+		preserved := *existing
+		return &preserved
+	}
+	return ptr(seeded)
 }
 
 func ptr(value string) *string {

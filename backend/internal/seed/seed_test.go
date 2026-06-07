@@ -118,6 +118,35 @@ func TestUpsertCatalogGeneratesIdempotentStatements(t *testing.T) {
 	}
 }
 
+func TestSeedAssetURLPreservesUploadedAsset(t *testing.T) {
+	seeded := "/static/landmarks/beijing_cover.png"
+	uploaded := "/uploads/admin_imports/beijing_real.png"
+
+	got := seedAssetURL(&uploaded, seeded)
+	if got == nil || *got != uploaded {
+		t.Fatalf("seedAssetURL(uploaded) = %v, want %q", got, uploaded)
+	}
+}
+
+func TestSeedAssetURLAllowsSeedToRefreshStaticAsset(t *testing.T) {
+	seeded := "/static/landmarks/beijing_cover_v2.png"
+	existingStatic := "/static/landmarks/beijing_cover.png"
+
+	got := seedAssetURL(&existingStatic, seeded)
+	if got == nil || *got != seeded {
+		t.Fatalf("seedAssetURL(static) = %v, want %q", got, seeded)
+	}
+}
+
+func TestSeedAssetURLUsesSeedForMissingAsset(t *testing.T) {
+	seeded := "/static/landmarks/beijing_cover.png"
+
+	got := seedAssetURL(nil, seeded)
+	if got == nil || *got != seeded {
+		t.Fatalf("seedAssetURL(nil) = %v, want %q", got, seeded)
+	}
+}
+
 func mustLoadCatalog(t *testing.T) Catalog {
 	t.Helper()
 	catalog, err := LoadCatalog(testSeedDir(t))
