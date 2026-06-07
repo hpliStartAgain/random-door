@@ -1,4 +1,4 @@
--- schema.sql — 15 张表建表 DDL（对应 database-detailed-design.md）
+-- schema.sql — 17 张表建表 DDL（对应 database-detailed-design.md）
 -- 枚举用 VARCHAR + 应用层校验；MVP 不建物理外键，*_id 字段建普通索引。
 -- 字符集统一 utf8mb4。
 
@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
   anonymous_id VARCHAR(128) NOT NULL,
   nickname VARCHAR(64),
   avatar_url VARCHAR(512),
+  age INT,
+  home_region VARCHAR(64),
   current_city_id BIGINT,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
@@ -47,6 +49,7 @@ CREATE TABLE IF NOT EXISTS landmarks (
   name VARCHAR(128) NOT NULL,
   image_url VARCHAR(512),
   description TEXT,
+  soundscape_url VARCHAR(512),
   created_at DATETIME NOT NULL,
   UNIQUE KEY uk_lm_city_name (city_id, name),
   KEY idx_lm_city (city_id)
@@ -199,4 +202,29 @@ CREATE TABLE IF NOT EXISTS ai_usage_logs (
   updated_at DATETIME NOT NULL,
   UNIQUE KEY uk_ai_usage_user_type_date (user_id, usage_type, usage_date),
   KEY idx_ai_usage_date (usage_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS guess_challenges (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  code VARCHAR(16) NOT NULL,
+  user_id BIGINT,
+  city_id BIGINT NOT NULL,
+  target_name VARCHAR(128),
+  image_url VARCHAR(512),
+  caption VARCHAR(300),
+  created_at DATETIME NOT NULL,
+  expires_at DATETIME NOT NULL,
+  UNIQUE KEY uk_guess_challenges_code (code),
+  KEY idx_guess_challenges_user_time (user_id, created_at),
+  KEY idx_guess_challenges_city (city_id),
+  KEY idx_guess_challenges_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS guess_answers (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  challenge_code VARCHAR(16) NOT NULL,
+  answer_text VARCHAR(64) NOT NULL,
+  is_correct TINYINT(1) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_guess_answers_challenge_time (challenge_code, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

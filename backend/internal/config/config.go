@@ -35,6 +35,7 @@ type ServerConfig struct {
 	StaticDir string
 	UploadDir string
 	SeedDir   string
+	SeedMode  string
 }
 
 type LLMConfig struct {
@@ -92,6 +93,7 @@ func Load() *Config {
 	v.SetDefault("STATIC_DIR", "./static")
 	v.SetDefault("UPLOAD_DIR", "./uploads")
 	v.SetDefault("SEED_DIR", "./data/seed")
+	v.SetDefault("SEED_MODE", "off")
 	v.SetDefault("UPLOAD_MAX_SIZE_MB", 5)
 	v.SetDefault("UPLOAD_ALLOWED_TYPES", "jpg,jpeg,png,webp")
 	v.SetDefault("AI_TIMEOUT_SECONDS", 30)
@@ -122,6 +124,7 @@ func Load() *Config {
 			StaticDir: v.GetString("STATIC_DIR"),
 			UploadDir: v.GetString("UPLOAD_DIR"),
 			SeedDir:   v.GetString("SEED_DIR"),
+			SeedMode:  strings.ToLower(strings.TrimSpace(v.GetString("SEED_MODE"))),
 		},
 		LLM: LLMConfig{
 			APIBase: v.GetString("LLM_API_BASE"),

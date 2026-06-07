@@ -10,6 +10,7 @@ import (
 // Handlers holds all handler instances.
 type Handlers struct {
 	City        *CityHandler
+	User        *UserHandler
 	Visit       *VisitHandler
 	Game        *GameHandler
 	Chat        *ChatHandler
@@ -48,6 +49,10 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 	{
 		// User
 		api.POST("/users/anonymous", h.Visit.CreateAnonymousUser)
+		if h.User != nil {
+			api.GET("/users/:user_id/profile", h.User.Profile)
+			api.PATCH("/users/:user_id/profile", h.User.UpdateProfile)
+		}
 
 		// Cities
 		api.GET("/cities", h.City.List)
@@ -69,6 +74,9 @@ func NewRouter(h Handlers, corsOrigins []string, staticDir, uploadDir string, ai
 
 		// Panorama guessing captions (rate limited)
 		api.POST("/guess/caption", aiLimiter, h.Guess.Caption)
+		api.POST("/guess/challenges", h.Guess.CreateChallenge)
+		api.GET("/guess/challenges/:code", h.Guess.GetChallenge)
+		api.POST("/guess/challenges/:code/answers", h.Guess.AnswerChallenge)
 
 		// Checkin (rate limited for image generation)
 		api.POST("/checkin/generate-image", aiLimiter, h.Checkin.GenerateImage)

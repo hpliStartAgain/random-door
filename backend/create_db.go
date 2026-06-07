@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
-	"github.com/joho/godotenv"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -15,19 +16,26 @@ func main() {
 
 	host := os.Getenv("DB_HOST")
 	if host == "" {
-		host = "117.72.99.55"
+		host = "127.0.0.1"
 	}
 	port := os.Getenv("DB_PORT")
 	if port == "" {
-		port = "53306"
+		port = "3306"
 	}
 	user := os.Getenv("DB_USER")
 	if user == "" {
-		user = "root"
+		log.Fatal("DB_USER is required")
 	}
 	pass := os.Getenv("DB_PASSWORD")
 	if pass == "" {
-		pass = "123456"
+		log.Fatal("DB_PASSWORD is required")
+	}
+	name := os.Getenv("DB_NAME")
+	if name == "" {
+		name = "city_roam"
+	}
+	if !regexp.MustCompile(`^[A-Za-z0-9_]+$`).MatchString(name) {
+		log.Fatalf("invalid DB_NAME %q", name)
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", user, pass, host, port)
@@ -41,10 +49,10 @@ func main() {
 		log.Fatalf("failed to ping mysql: %v", err)
 	}
 
-	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS city_roam CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", name))
 	if err != nil {
 		log.Fatalf("failed to create database: %v", err)
 	}
 
-	fmt.Println("Database city_roam created or already exists.")
+	fmt.Printf("Database %s created or already exists.\n", name)
 }

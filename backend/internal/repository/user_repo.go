@@ -41,3 +41,10 @@ func (r *UserRepo) UpdateCurrentCity(ctx context.Context, userID, cityID int64) 
 	return r.DB.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).
 		Update("current_city_id", cityID).Error
 }
+
+func (r *UserRepo) UpdateProfile(ctx context.Context, userID int64, fields map[string]any) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	return r.DB.WithContext(ctx).Model(&model.User{}).Where("id = ?", userID).Updates(fields).Error
+}

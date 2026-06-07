@@ -7,10 +7,11 @@
 ```
 frontend/src/
   pages/      HomePage ModeSelectPage FreeExplorePage GameModePage
-              CityPage ChatPage CheckinPage AchievementPage
+              CityPage ChatPage CheckinPage AchievementPage GuessChallengePage
   components/ MapCanvas CityMarker DicePanel CityCard LandmarkCard
               FoodCard CharacterCard DialectCard ChatBox ImageUploader
-              CheckinResult BadgeWall ModeEntryCard
+              CheckinResult BadgeWall ModeEntryCard GuessChallengeModal
+              SoundscapeControl ProfilePanel ProfileVisitedList ProfilePosterGrid
   api/        client.ts city.ts game.ts visit.ts chat.ts checkin.ts achievement.ts
   store/      useUserStore.ts useGameStore.ts useCityStore.ts
   App.tsx main.tsx router.tsx
@@ -29,6 +30,7 @@ frontend/src/
 | ChatPage | /city/:id/chat/:cid | 与人物对话 | - | POST /chat |
 | CheckinPage | /city/:id/checkin | 上传照片→生图→确认打卡 | - | POST /checkin/generate-image、POST /checkin |
 | AchievementPage | /achievements | 成就墙（已解锁/未解锁/进度） | useUserStore | GET /users/{id}/achievements |
+| GuessChallengePage | /?guess=:code | 好友猜位置挑战页，展示截图并提交答案 | - | GET /guess/challenges/{code}、POST /guess/challenges/{code}/answers |
 
 ---
 
@@ -38,16 +40,21 @@ frontend/src/
 | MapCanvas | cities, onCityClick, mode, movePath? | **唯一封装高德 SDK**；打 Marker；游戏模式播放移动动画 |
 | CityMarker | city, onClick | 地图标记（也可由 MapCanvas 内部生成） |
 | DicePanel | onRoll, rolling, result | 掷骰按钮 + 动画 + 显示方向/距离 |
-| CityCard | city | 城市简介卡 |
+| CityCard | city | 城市简介卡；发现页列表项展示 landmark_count/food_count/character_count 信息密度（CityListItem，缺字段按 0） |
 | LandmarkCard | landmark, onCheckin? | 地标卡，可触发打卡 |
 | FoodCard | food | 美食卡 |
-| CharacterCard | character, onChat | 人物卡，点击进对话 |
+| CharacterCard | character, onChat | 人物卡，点击进对话；展示 role_title/life_span/intro_quote（引导语非史实断言） |
 | DialectCard | sample, explanation | 方言样例 + 解释 |
 | ChatBox | messages, onSend, loading | 对话气泡 + 输入框 |
 | ImageUploader | onSelect, maxSizeMB=5, accept | 选图 + 前端预校验（类型/大小） |
 | CheckinResult | imageUrl, onConfirm, onRetry | 展示生成图 + 确认/重试 |
 | BadgeWall | unlocked, locked, progress | 成就墙网格 |
 | ModeEntryCard | mode, title, desc, onEnter | 模式入口卡 |
+| GuessChallengeModal | shotUrl, caption, cityId, targetName | 创建挑战链接、复制文案/图片、保存截图 |
+| SoundscapeControl | url, label | 地标声景播放控制；必须用户点击后播放 |
+| ProfilePanel | - | 右侧个人足迹面板；读取资产与 profile，支持匿名资料编辑 |
+| ProfileVisitedList | cities, compact | 足迹城市列表，可复用在资产页和 profile 面板 |
+| ProfilePosterGrid | posters, compact | 打卡海报列表，可复用在资产页和 profile 面板 |
 
 ---
 
@@ -63,6 +70,8 @@ frontend/src/
 | chat.ts | sendChat(cityId,characterId,message) |
 | checkin.ts | generateImage(form)、createCheckin(payload) |
 | achievement.ts | getAchievements(userId) |
+| guess.ts | generateGuessCaption()、createGuessChallenge()、getGuessChallenge()、answerGuessChallenge() |
+| user.ts | getUserProfile()、updateUserProfile() |
 
 ---
 
@@ -71,7 +80,8 @@ frontend/src/
 |---|---|---|
 | useUserStore | userId, anonymousId, currentCityId | initUser()（读 localStorage，无则建匿名用户并存） |
 | useGameStore | fromCity, lastRoll, targetCity, rolling | setInit、roll、reset |
-| useCityStore | cities[], cityCache{} | loadCities()、loadCity(id)（带缓存） |
+| useCityStore | cities[], cityCache{}, searchQuery, activeRegion, activeTag | loadCities()、loadCity(id)（带缓存）、筛选状态 |
+| useViewStore | currentView, canvasMode, streetTarget, drawer, profileOpen | 视图切换、街景目标、右抽屉、个人面板开关 |
 
 ---
 

@@ -25,14 +25,17 @@ git clone <repo> && cd random-door
 
 # 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env：至少修改 DB_PASSWORD / MYSQL_ROOT_PASSWORD，并填入高德 Key
+# 编辑 .env：至少修改外部 MySQL 的 DB_*，并填入高德 Key
 # LLM_API_KEY / IMAGE_API_KEY 可先留空或 mock，演示真实 AI 时再填
 
 # 3. 一键启动
 docker compose up -d        # 或 make up
 
-# 4. 初始化数据（compose 会启动 mysql；后端会自动建表与 seed 导入）
-# make migrate 和 make seed 已废弃
+# 4. 内容数据
+# 后端启动会自动建表，但默认不写 seed；数据库是后台内容的事实源。
+# 如需给空库补齐演示 seed，先只读盘点，再显式 bootstrap：
+make seed-audit
+make seed
 
 # 5. 访问
 # 前端: http://localhost           （或 Caddy 暴露端口）
@@ -45,7 +48,9 @@ docker compose up -d        # 或 make up
 | `make up` / `make down` | 启停所有容器 |
 | `make build` | 构建镜像 |
 | `make migrate` | (已废弃，启动时自动建表) |
-| `make seed` | (已废弃，启动时自动导入) |
+| `make seed-audit` | 只读盘点真实库与 seed 的差异 |
+| `make seed` | 显式补齐缺失 seed 行，不覆盖后台已有内容 |
+| `make seed-sync` | 谨慎：按 seed 覆盖自然键匹配行 |
 | `make logs` | 查看后端日志 |
 | `make lint` / `make test` | 检查 / 测试 |
 

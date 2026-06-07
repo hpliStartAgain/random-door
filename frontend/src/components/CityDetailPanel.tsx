@@ -121,6 +121,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                           lat: city.lat,
                           lng: city.lng,
                           cover_image_url: lm.image_url || city.cover_image_url,
+                          soundscape_url: lm.soundscape_url,
                           tags: city.tags,
                         });
                       }}
@@ -220,7 +221,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
               className="w-full h-28 rounded-xl bg-gradient-to-br from-primary/10 to-accent/15 border border-primary/20 flex flex-col items-center justify-center cursor-pointer hover:scale-[1.01] hover:shadow-sm transition-all group"
               aria-label={`查看${city.name}城市风光图`}
             >
-              <span className="text-3xl mb-1.5 group-hover:scale-110 transition-transform">�️</span>
+              <span className="text-3xl mb-1.5 group-hover:scale-110 transition-transform">🏙️</span>
               <span className="text-sm font-semibold text-primary">查看城市风光</span>
             </button>
 

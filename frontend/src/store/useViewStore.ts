@@ -14,6 +14,7 @@ export interface StreetTarget {
   lat?: number;
   lng?: number;
   cover_image_url?: string;
+  soundscape_url?: string;
   tags?: string[];
 }
 

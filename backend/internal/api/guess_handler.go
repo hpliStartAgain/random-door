@@ -9,11 +9,17 @@ import (
 )
 
 type GuessHandler struct {
-	svc *service.GuessService
+	svc          *service.GuessService
+	challengeSvc *service.GuessChallengeService
 }
 
 func NewGuessHandler(svc *service.GuessService) *GuessHandler {
 	return &GuessHandler{svc: svc}
+}
+
+func (h *GuessHandler) WithChallengeService(svc *service.GuessChallengeService) *GuessHandler {
+	h.challengeSvc = svc
+	return h
 }
 
 type guessCaptionReq struct {

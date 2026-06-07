@@ -23,7 +23,8 @@ backend/
 ├── Dockerfile
 ├── go.mod / go.sum
 ├── config/config.yaml        # 非敏感默认配置（可选）
-├── cmd/server/main.go        # 入口
+├── cmd/server/main.go        # 服务入口
+├── cmd/seedtool/main.go      # 受控 seed audit/bootstrap/sync 工具
 ├── internal/
 │   ├── api/                  # router + 6 handler
 │   │   ├── router.go
@@ -42,7 +43,7 @@ backend/
 │   ├── geo/                  # distance.go bearing.go target_point.go city_matcher.go
 │   ├── ai/                   # llm_client.go image_client.go prompt_builder.go
 │   ├── upload/               # validator.go storage.go
-│   ├── seed/                 # seed.go（校验 + 事务化幂等 upsert）
+│   ├── seed/                 # seed.go（校验 + 受控 bootstrap/sync 导入）
 │   ├── achievement/          # evaluator.go rules.go
 │   ├── middleware/           # cors.go logger.go recover.go rate_limit.go
 │   └── config/config.go

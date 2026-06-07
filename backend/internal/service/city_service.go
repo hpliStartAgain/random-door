@@ -59,10 +59,11 @@ type CityDetail struct {
 }
 
 type LandmarkItem struct {
-	ID          int64   `json:"id"`
-	Name        string  `json:"name"`
-	ImageURL    *string `json:"image_url,omitempty"`
-	Description *string `json:"description,omitempty"`
+	ID            int64   `json:"id"`
+	Name          string  `json:"name"`
+	ImageURL      *string `json:"image_url,omitempty"`
+	Description   *string `json:"description,omitempty"`
+	SoundscapeURL *string `json:"soundscape_url,omitempty"`
 }
 
 type FoodItem struct {
@@ -150,7 +151,7 @@ func (s *CityService) Detail(ctx context.Context, cityID int64) (*CityDetail, er
 	lms := make([]LandmarkItem, 0, len(landmarks))
 	for _, l := range landmarks {
 		lms = append(lms, LandmarkItem{
-			ID: l.ID, Name: l.Name, ImageURL: l.ImageURL, Description: l.Description,
+			ID: l.ID, Name: l.Name, ImageURL: l.ImageURL, Description: l.Description, SoundscapeURL: l.SoundscapeURL,
 		})
 	}
 

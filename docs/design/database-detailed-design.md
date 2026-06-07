@@ -4,8 +4,8 @@
 > 主键统一 `id BIGINT PK AUTO_INCREMENT`；时间 `created_at DATETIME NOT NULL`，可变表加 `updated_at`。
 > 枚举用 VARCHAR + 应用层校验（不用 MySQL ENUM）。
 
-## 0. 表清单（15 张）
-users / cities / city_tags / landmarks / foods / characters / city_visits / dice_rolls / checkins / achievements / user_achievements / chat_messages / comments / ai_tasks / ai_usage_logs
+## 0. 表清单（17 张）
+users / cities / city_tags / landmarks / foods / characters / city_visits / dice_rolls / checkins / achievements / user_achievements / chat_messages / comments / ai_tasks / ai_usage_logs / guess_challenges / guess_answers
 
 ## 0.1 枚举字典
 | 字段 | 取值 |
@@ -36,6 +36,8 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | anonymous_id | VARCHAR(128) | NOT NULL, UNIQUE | 前端 UUID |
 | nickname | VARCHAR(64) | NULL | |
 | avatar_url | VARCHAR(512) | NULL | |
+| age | INT | NULL | 匿名 profile 年龄 |
+| home_region | VARCHAR(64) | NULL | 匿名 profile 家乡/地区 |
 | current_city_id | BIGINT | NULL | 当前所在城市 |
 | created_at | DATETIME | NOT NULL | |
 | updated_at | DATETIME | NOT NULL | |
@@ -58,7 +60,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | dialect_explanation | TEXT | NULL |
 | created_at / updated_at | DATETIME | NOT NULL |
 
-**索引**：UNIQUE(name)。城市名是 seed 幂等 upsert 的自然键。
+**索引**：UNIQUE(name)。城市名是受控 seed 导入的自然键。
 
 ---
 
@@ -83,16 +85,17 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | name | VARCHAR(128) | NOT NULL |
 | image_url | VARCHAR(512) | NULL（生图参考图） |
 | description | TEXT | NULL |
+| soundscape_url | VARCHAR(512) | NULL（本地 `/static/soundscapes/...`） |
 | created_at | DATETIME | NOT NULL |
 
-**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是 seed 幂等 upsert 的自然键。
+**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是受控 seed 导入的自然键。
 
 ---
 
 ## 5. foods — 美食表
 结构同 landmarks：id / city_id(INDEX) / name / image_url / description / created_at。
 
-**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是 seed 幂等 upsert 的自然键。
+**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是受控 seed 导入的自然键。
 
 ---
 
@@ -107,9 +110,12 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | persona | TEXT | NOT NULL | 人设（**不下发前端**） |
 | dialect_style | TEXT | NULL | |
 | prompt | TEXT | NOT NULL | 系统 Prompt（**不下发前端**） |
+| role_title | VARCHAR(128) | NULL | 人物身份（下发前端） |
+| life_span | VARCHAR(64) | NULL | 年代/生卒（下发前端） |
+| intro_quote | VARCHAR(255) | NULL | 角色口吻引导语（下发前端，非史实断言） |
 | created_at | DATETIME | NOT NULL | |
 
-**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是 seed 幂等 upsert 的自然键。
+**索引**：UNIQUE(city_id, name), INDEX(city_id)。`(city_id, name)` 是受控 seed 导入的自然键。
 
 ---
 
@@ -266,17 +272,52 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 
 ---
 
-## 15. GORM model 映射提醒
+## 16. guess_challenges — 猜位置挑战表
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK AI | |
+| code | VARCHAR(16) | NOT NULL, UNIQUE | 对外分享 code，不暴露 user_id |
+| user_id | BIGINT | NULL, INDEX | 匿名创建者，可为空 |
+| city_id | BIGINT | NOT NULL, INDEX | 正确城市 |
+| target_name | VARCHAR(128) | NULL | 地标/场景名 |
+| image_url | VARCHAR(512) | NULL | 本地截图或地标图片 |
+| caption | VARCHAR(300) | NULL | 分享文案 |
+| created_at | DATETIME | NOT NULL | |
+| expires_at | DATETIME | NOT NULL, INDEX | 过期后不可访问 |
+
+**索引**：UNIQUE(code), INDEX(user_id, created_at), INDEX(city_id), INDEX(expires_at)。
+
+---
+
+## 17. guess_answers — 猜位置答案表
+
+| 字段 | 类型 | 约束 | 说明 |
+|---|---|---|---|
+| id | BIGINT | PK AI | |
+| challenge_code | VARCHAR(16) | NOT NULL, INDEX | 对应 guess_challenges.code |
+| answer_text | VARCHAR(64) | NOT NULL | 用户提交答案 |
+| is_correct | TINYINT(1) | NOT NULL | 是否命中城市或 target_name |
+| created_at | DATETIME | NOT NULL | |
+
+**索引**：INDEX(challenge_code, created_at)。
+
+---
+
+## 18. GORM model 映射提醒
 - 每个 model struct 对应一表，含 `gorm:"column:...;index"` 与 `json:"..."` tag。
 - json 字段名需与 api-contract.md 一致。
 - created_at/updated_at 用 GORM 自动维护（autoCreateTime/autoUpdateTime）。
 
 ---
 
-## 16. Seed 幂等导入
+## 19. Seed 受控导入
 
 - `backend/internal/seed` 在写库前完整解析并校验 `cities.json` 与 `achievements.json`。
 - 城市数量允许 12~100 个；演示版 seed 固定为 35 个精选城市。每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
-- 启动时在单一事务内执行 upsert；任何一条失败则整体回滚并阻止服务启动，避免半套演示数据。
+- 地标 `soundscape_url` 可为空；非空时必须是 `/static/soundscapes/...` 本地路径，并确保音频文件存在或演示前补齐。
+- 服务启动默认 `SEED_MODE=off`，不写入 seed；数据库是后台 catalog 的事实源。
+- `bootstrap` 模式在单一事务内只插入缺失行，不更新已有后台内容；适用于空库或人工确认后的补齐。
+- `sync` 模式在单一事务内按自然键覆盖匹配行；仅用于明确需要 seed 覆盖数据库的维护场景，执行前必须先 audit。
 - 自然键：`cities.name`、`city_tags(city_id,tag)`、`landmarks(city_id,name)`、`foods(city_id,name)`、`characters(city_id,name)`、`achievements.code`。
-- 重复启动会更新已有内容并补齐缺失内容，不要求手动清库或执行临时脚本。
+- 显式工具：`go run ./cmd/seedtool -mode audit|bootstrap|sync`；`sync` 需额外确认参数。

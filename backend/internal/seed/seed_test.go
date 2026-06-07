@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func TestLoadCatalog(t *testing.T) {
@@ -47,6 +48,17 @@ func TestLoadCatalog(t *testing.T) {
 			t.Fatalf("expected city %q is missing", city)
 		}
 	}
+	soundscapeCount := 0
+	for _, city := range catalog.Cities {
+		for _, landmark := range city.Landmarks {
+			if landmark.SoundscapeURL != "" {
+				soundscapeCount++
+			}
+		}
+	}
+	if soundscapeCount < 5 {
+		t.Fatalf("soundscape count = %d, want at least 5 demo soundscapes", soundscapeCount)
+	}
 }
 
 func TestValidateCatalogRejectsDuplicateCity(t *testing.T) {
@@ -84,6 +96,42 @@ func TestValidateCatalogRejectsNonCompliantPrompt(t *testing.T) {
 	}
 }
 
+func TestLoadCatalogCharactersHaveNarrativeFields(t *testing.T) {
+	catalog := mustLoadCatalog(t)
+	for _, city := range catalog.Cities {
+		ch := city.Characters[0]
+		if strings.TrimSpace(ch.RoleTitle) == "" {
+			t.Fatalf("city %q character missing role_title", city.Name)
+		}
+		if strings.TrimSpace(ch.LifeSpan) == "" {
+			t.Fatalf("city %q character missing life_span", city.Name)
+		}
+		if strings.TrimSpace(ch.IntroQuote) == "" {
+			t.Fatalf("city %q character missing intro_quote", city.Name)
+		}
+	}
+}
+
+func TestValidateCatalogRejectsOverlongIntroQuote(t *testing.T) {
+	catalog := mustLoadCatalog(t)
+	catalog.Cities[0].Characters[0].IntroQuote = strings.Repeat("字", 256)
+
+	err := ValidateCatalog(catalog)
+	if err == nil || !strings.Contains(err.Error(), "intro_quote") {
+		t.Fatalf("ValidateCatalog() error = %v, want intro_quote length error", err)
+	}
+}
+
+func TestValidateCatalogRejectsInvalidSoundscapeURL(t *testing.T) {
+	catalog := mustLoadCatalog(t)
+	catalog.Cities[0].Landmarks[0].SoundscapeURL = "/static/audio/bad.wav"
+
+	err := ValidateCatalog(catalog)
+	if err == nil || !strings.Contains(err.Error(), "soundscape_url") {
+		t.Fatalf("ValidateCatalog() error = %v, want soundscape_url error", err)
+	}
+}
+
 func TestUpsertCatalogGeneratesIdempotentStatements(t *testing.T) {
 	catalog := mustLoadCatalog(t)
 	db, err := gorm.Open(mysql.New(mysql.Config{
@@ -114,6 +162,47 @@ func TestUpsertCatalogGeneratesIdempotentStatements(t *testing.T) {
 	for _, statement := range statements {
 		if !strings.Contains(statement, "ON DUPLICATE KEY UPDATE") {
 			t.Errorf("statement is not idempotent: %s", statement)
+		}
+	}
+}
+
+func TestBootstrapCatalogGeneratesInsertOnlyStatements(t *testing.T) {
+	catalog := mustLoadCatalog(t)
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN:                       "city_roam:city_roam@tcp(localhost:3306)/city_roam?charset=utf8mb4&parseTime=True&loc=Local",
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{
+		DryRun:                 true,
+		DisableAutomaticPing:   true,
+		SkipDefaultTransaction: true,
+	})
+	if err != nil {
+		t.Fatalf("gorm.Open() error = %v", err)
+	}
+
+	var conflicts []clause.OnConflict
+	if err := db.Callback().Create().Before("gorm:create").Register("test:capture_bootstrap_conflicts", func(tx *gorm.DB) {
+		item, ok := tx.Statement.Clauses["ON CONFLICT"]
+		if !ok {
+			return
+		}
+		conflict, ok := item.Expression.(clause.OnConflict)
+		if ok {
+			conflicts = append(conflicts, conflict)
+		}
+	}); err != nil {
+		t.Fatalf("register create callback: %v", err)
+	}
+
+	if err := bootstrapCatalog(db, catalog); err != nil {
+		t.Fatalf("bootstrapCatalog() error = %v", err)
+	}
+	if len(conflicts) == 0 {
+		t.Fatal("bootstrapCatalog() generated no conflict clauses")
+	}
+	for _, conflict := range conflicts {
+		if !conflict.DoNothing {
+			t.Errorf("bootstrap conflict is not insert-only: %#v", conflict)
 		}
 	}
 }

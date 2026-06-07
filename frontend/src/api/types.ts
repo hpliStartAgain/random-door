@@ -11,6 +11,16 @@ export interface UserResponse {
   current_city_id: number | null;
 }
 
+export interface UserProfileResponse {
+  user_id: number;
+  anonymous_id: string;
+  nickname?: string;
+  avatar_url?: string;
+  age?: number;
+  home_region?: string;
+  current_city_id: number | null;
+}
+
 export interface CityListItem {
   id: number;
   name: string;
@@ -33,6 +43,7 @@ export interface Landmark {
   name: string;
   image_url?: string;
   description?: string;
+  soundscape_url?: string;
 }
 
 export interface Food {
@@ -125,6 +136,27 @@ export interface GuessCaptionResponse {
   weibo: string;
   moments: string;
   hashtags: string[];
+}
+
+export interface GuessChallengeResponse {
+  code: string;
+  share_url?: string;
+  city_id: number;
+  city_name?: string;
+  target_name?: string;
+  image_url?: string;
+  caption?: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface GuessAnswerResponse {
+  answer_id: number;
+  is_correct: boolean;
+  answer_text: string;
+  city_name: string;
+  target_name?: string;
+  message: string;
 }
 
 export interface GenerateImageResponse {

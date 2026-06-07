@@ -1,7 +1,7 @@
 # Makefile — 常用命令封装，降低团队上手成本
 # 对应 README.md。用法：make up / make seed ...
 
-.PHONY: up down build logs migrate seed lint test fe-dev fe-build
+.PHONY: up down build logs migrate seed seed-audit seed-sync lint test fe-dev fe-build
 
 # ---------- Docker ----------
 up:            ## 启动全部容器
@@ -17,12 +17,18 @@ logs:          ## 查看后端日志
 	docker-compose logs -f app
 
 # ---------- 数据 ----------
-# docker compose 默认启动 MySQL；自动建表与自动导入（Seed）由后端启动时自动完成。
+# docker compose 使用外部 MySQL；应用启动只自动建表，不默认写入 seed 内容。
 migrate:       ## 已废弃，应用启动自动执行
 	@echo "Migration is auto-executed on backend startup."
 
-seed:          ## 已废弃，应用启动自动执行
-	@echo "Seeding is auto-executed on backend startup."
+seed-audit:    ## 只读盘点真实库与 seed 的差异
+	cd backend && go run ./cmd/seedtool -mode audit
+
+seed:          ## 显式补齐缺失 seed 行，不覆盖后台已有内容
+	cd backend && go run ./cmd/seedtool -mode bootstrap
+
+seed-sync:     ## 谨慎：按 seed 覆盖自然键匹配行
+	cd backend && go run ./cmd/seedtool -mode sync -confirm-overwrite
 
 # ---------- 质量 ----------
 lint:          ## 后端 + 前端静态检查

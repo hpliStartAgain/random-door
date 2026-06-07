@@ -20,6 +20,17 @@ ACHIEVEMENTS_JSON = SEED_DIR / "achievements.json"
 SEED_INPUTS = REPO_ROOT / "scripts" / "seed_inputs.csv"
 
 
+def load_dotenv(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def load_json(path: Path) -> list[dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -30,42 +41,38 @@ def write_json(path: Path, data: list[dict]) -> None:
 
 def audit_db(_: argparse.Namespace) -> None:
     rows = []
+    load_dotenv(REPO_ROOT / ".env")
     mysql_cmd = os.getenv("MYSQL_CLI", "mysql")
     db_name = os.getenv("DB_NAME")
-    if db_name:
-        query = "SELECT name, province, lat, lng FROM cities ORDER BY id LIMIT 35;"
-        cmd = [
-            mysql_cmd,
-            "-h",
-            os.getenv("DB_HOST", "127.0.0.1"),
-            "-P",
-            os.getenv("DB_PORT", "3306"),
-            "-u",
-            os.getenv("DB_USER", "root"),
-            f"-p{os.getenv('DB_PASSWORD', '')}",
-            "-N",
-            "-e",
-            query,
-            db_name,
-        ]
-        try:
-            output = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
-            for line in output.splitlines():
-                name, province, lat, lng = line.split("\t")
-                rows.append({"name": name, "province": province, "lat": lat, "lng": lng})
-        except (OSError, subprocess.CalledProcessError, ValueError):
-            rows = []
+    if not db_name:
+        raise SystemExit("DB_NAME is required for audit-db")
 
+    query = "SELECT name, province, lat, lng FROM cities ORDER BY id LIMIT 35;"
+    cmd = [
+        mysql_cmd,
+        "-h",
+        os.getenv("DB_HOST", "127.0.0.1"),
+        "-P",
+        os.getenv("DB_PORT", "3306"),
+        "-u",
+        os.getenv("DB_USER", "root"),
+        "-N",
+        "-e",
+        query,
+        db_name,
+    ]
+    password = os.getenv("DB_PASSWORD", "")
+    if password:
+        cmd.insert(7, f"-p{password}")
+    try:
+        output = subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
+        for line in output.splitlines():
+            name, province, lat, lng = line.split("\t")
+            rows.append({"name": name, "province": province, "lat": lat, "lng": lng})
+    except (OSError, subprocess.CalledProcessError, ValueError) as exc:
+        raise SystemExit(f"audit-db failed to query MySQL: {exc}") from exc
     if not rows:
-        rows = [
-            {
-                "name": city["name"],
-                "province": city["province"],
-                "lat": city["lat"],
-                "lng": city["lng"],
-            }
-            for city in load_json(CITIES_JSON)[:35]
-        ]
+        raise SystemExit("audit-db returned zero city rows")
 
     with SEED_INPUTS.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["name", "province", "lat", "lng"])

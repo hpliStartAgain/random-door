@@ -7,7 +7,8 @@ import type {
   AchievementWallResponse, AdminUploadResponse, ImageTaskResponse,
   AdminCoverageResponse, AdminUpdateResponse, UserAssetsResponse,
   CommentListResponse, CommentItem, CommentTargetType,
-  GuessCaptionResponse,
+  GuessCaptionResponse, GuessChallengeResponse, GuessAnswerResponse,
+  UserProfileResponse,
 } from './types';
 
 export const api = {
@@ -77,6 +78,32 @@ export const api = {
 
   getUserAssets: (userId: number) =>
     apiClient.get<unknown, UserAssetsResponse>(`/users/${userId}/assets`),
+
+  getUserProfile: (userId: number) =>
+    apiClient.get<unknown, UserProfileResponse>(`/users/${userId}/profile`),
+
+  updateUserProfile: (userId: number, payload: {
+    nickname?: string;
+    age?: number;
+    home_region?: string;
+  }) => apiClient.patch<unknown, UserProfileResponse>(`/users/${userId}/profile`, payload),
+
+  createGuessChallenge: (payload: {
+    user_id?: number | null;
+    city_id: number;
+    target_name?: string;
+    image_url?: string;
+    image_data_url?: string;
+    caption?: string;
+  }) => apiClient.post<unknown, GuessChallengeResponse>('/guess/challenges', payload),
+
+  getGuessChallenge: (code: string) =>
+    apiClient.get<unknown, GuessChallengeResponse>(`/guess/challenges/${encodeURIComponent(code)}`),
+
+  answerGuessChallenge: (code: string, answerText: string) =>
+    apiClient.post<unknown, GuessAnswerResponse>(`/guess/challenges/${encodeURIComponent(code)}/answers`, {
+      answer_text: answerText,
+    }),
 
   adminCoverage: (token: string) =>
     apiClient.get<unknown, AdminCoverageResponse>('/admin/catalog/coverage', {

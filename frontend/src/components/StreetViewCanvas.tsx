@@ -8,6 +8,7 @@ import { CheckinFlow } from './CheckinFlow';
 import { AchievementUnlock } from './overlays/AchievementUnlock';
 import type { Achievement } from './overlays/AchievementUnlock';
 import { GuessChallengeModal } from './GuessChallengeModal';
+import { SoundscapeControl } from './SoundscapeControl';
 
 export const StreetViewCanvas: React.FC = () => {
   const { setCanvasMode, streetTarget } = useViewStore();
@@ -176,6 +177,8 @@ export const StreetViewCanvas: React.FC = () => {
         </p>
       </div>
 
+      <SoundscapeControl url={streetTarget?.soundscape_url} label={targetName} />
+
       {checkinCity && (
         <CheckinFlow
           city={checkinCity}
@@ -199,6 +202,8 @@ export const StreetViewCanvas: React.FC = () => {
         shotUrl={shotUrl}
         caption={caption}
         targetName={targetName}
+        cityId={captionCityId}
+        userId={userId}
       />
     </div>
   );

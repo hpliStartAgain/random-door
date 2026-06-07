@@ -11,8 +11,8 @@ import (
 
 func TestSchemaDefinesTablesAndRequiredIndexes(t *testing.T) {
 	schema := readSchema(t)
-	if got := strings.Count(schema, "CREATE TABLE IF NOT EXISTS "); got != 15 {
-		t.Fatalf("table count = %d, want 15", got)
+	if got := strings.Count(schema, "CREATE TABLE IF NOT EXISTS "); got != 17 {
+		t.Fatalf("table count = %d, want 17", got)
 	}
 
 	required := []string{
@@ -49,6 +49,11 @@ func TestSchemaDefinesTablesAndRequiredIndexes(t *testing.T) {
 		"KEY idx_ai_tasks_type_status (type, status)",
 		"UNIQUE KEY uk_ai_usage_user_type_date (user_id, usage_type, usage_date)",
 		"KEY idx_ai_usage_date (usage_date)",
+		"UNIQUE KEY uk_guess_challenges_code (code)",
+		"KEY idx_guess_challenges_user_time (user_id, created_at)",
+		"KEY idx_guess_challenges_city (city_id)",
+		"KEY idx_guess_challenges_expires (expires_at)",
+		"KEY idx_guess_answers_challenge_time (challenge_code, created_at)",
 	}
 	for _, item := range required {
 		if !strings.Contains(schema, item) {
@@ -74,9 +79,11 @@ func TestModelTableNames(t *testing.T) {
 		(Comment{}).TableName():         "comments",
 		(AITask{}).TableName():          "ai_tasks",
 		(AIUsageLog{}).TableName():      "ai_usage_logs",
+		(GuessChallenge{}).TableName():  "guess_challenges",
+		(GuessAnswer{}).TableName():     "guess_answers",
 	}
-	if len(tables) != 15 {
-		t.Fatalf("unique model table names = %d, want 15", len(tables))
+	if len(tables) != 17 {
+		t.Fatalf("unique model table names = %d, want 17", len(tables))
 	}
 	for got, want := range tables {
 		if got != want {
@@ -124,6 +131,13 @@ func TestModelIndexTagsMatchSchemaContract(t *testing.T) {
 		{AIUsageLog{}, "UserID", []string{"uniqueIndex:uk_ai_usage_user_type_date,priority:1"}},
 		{AIUsageLog{}, "UsageType", []string{"uniqueIndex:uk_ai_usage_user_type_date,priority:2"}},
 		{AIUsageLog{}, "UsageDate", []string{"uniqueIndex:uk_ai_usage_user_type_date,priority:3", "index:idx_ai_usage_date"}},
+		{GuessChallenge{}, "Code", []string{"uniqueIndex:uk_guess_challenges_code"}},
+		{GuessChallenge{}, "UserID", []string{"index:idx_guess_challenges_user_time,priority:1"}},
+		{GuessChallenge{}, "CityID", []string{"index:idx_guess_challenges_city"}},
+		{GuessChallenge{}, "CreatedAt", []string{"index:idx_guess_challenges_user_time,priority:2"}},
+		{GuessChallenge{}, "ExpiresAt", []string{"index:idx_guess_challenges_expires"}},
+		{GuessAnswer{}, "ChallengeCode", []string{"index:idx_guess_answers_challenge_time,priority:1"}},
+		{GuessAnswer{}, "CreatedAt", []string{"index:idx_guess_answers_challenge_time,priority:2"}},
 	}
 
 	for _, tt := range tests {
@@ -137,6 +151,74 @@ func TestModelIndexTagsMatchSchemaContract(t *testing.T) {
 		for _, want := range tt.want {
 			if !strings.Contains(tag, want) {
 				t.Errorf("%s.%s gorm tag %q does not contain %q", modelType.Name(), tt.field, tag, want)
+			}
+		}
+	}
+}
+
+func TestProfileAndSoundscapeFieldsContract(t *testing.T) {
+	schema := readSchema(t)
+	for _, col := range []string{
+		"age INT",
+		"home_region VARCHAR(64)",
+		"soundscape_url VARCHAR(512)",
+	} {
+		if !strings.Contains(schema, col) {
+			t.Errorf("schema is missing column %q", col)
+		}
+	}
+
+	checks := []struct {
+		model any
+		field string
+		want  []string
+	}{
+		{User{}, "Age", []string{"column:age", `json:"age,omitempty"`}},
+		{User{}, "HomeRegion", []string{"column:home_region", `json:"home_region,omitempty"`}},
+		{Landmark{}, "SoundscapeURL", []string{"column:soundscape_url", `json:"soundscape_url,omitempty"`}},
+	}
+	for _, check := range checks {
+		modelType := reflect.TypeOf(check.model)
+		field, ok := modelType.FieldByName(check.field)
+		if !ok {
+			t.Errorf("%s.%s does not exist", modelType.Name(), check.field)
+			continue
+		}
+		for _, want := range check.want {
+			if !strings.Contains(string(field.Tag), want) {
+				t.Errorf("%s.%s tag %q does not contain %q", modelType.Name(), check.field, field.Tag, want)
+			}
+		}
+	}
+}
+
+func TestCharacterNarrativeFieldsContract(t *testing.T) {
+	schema := readSchema(t)
+	for _, col := range []string{
+		"role_title VARCHAR(128)",
+		"life_span VARCHAR(64)",
+		"intro_quote VARCHAR(255)",
+	} {
+		if !strings.Contains(schema, col) {
+			t.Errorf("schema is missing characters column %q", col)
+		}
+	}
+
+	wantTags := map[string][]string{
+		"RoleTitle":  {"column:role_title", `json:"role_title,omitempty"`},
+		"LifeSpan":   {"column:life_span", `json:"life_span,omitempty"`},
+		"IntroQuote": {"column:intro_quote", `json:"intro_quote,omitempty"`},
+	}
+	charType := reflect.TypeOf(Character{})
+	for fieldName, wants := range wantTags {
+		field, ok := charType.FieldByName(fieldName)
+		if !ok {
+			t.Errorf("Character.%s does not exist", fieldName)
+			continue
+		}
+		for _, want := range wants {
+			if !strings.Contains(string(field.Tag), want) {
+				t.Errorf("Character.%s tag %q does not contain %q", fieldName, field.Tag, want)
 			}
 		}
 	}

@@ -6,9 +6,9 @@
 | 组件 | 说明 | 是否必需 |
 |---|---|---|
 | app | Go 后端服务（Gin） | 必需 |
-| mysql | MySQL 8 / MariaDB | 必需 |
+| mysql | 外部 MySQL 8 / MariaDB 实例 | 必需 |
 | caddy | 静态托管前端 + 反代 /api（可选，亦可由 app 直接托管） | 可选 |
-| static volume | 城市地标/美食/人物/勋章静态资源 | 必需 |
+| static assets | 城市地标/美食/人物/勋章静态资源（镜像内置或只读挂载） | 必需 |
 | uploads volume | 用户上传与生成图片 | 必需 |
 
 > 注：**不含 Nginx**（理由见 system-architecture.md 第 6 节）。
@@ -17,17 +17,17 @@
 ```text
 2C2G Server
   ├── caddy (可选)   :80/:443  →  反代 app:8080，托管 frontend/dist
-  ├── app (Go)       :8080     →  读 .env，连 mysql，挂 static/uploads
-  ├── mysql          :3306     →  低资源配置，挂 mysql_data
+  ├── app (Go)       :8080     →  读 .env，连外部 mysql，挂 static/uploads
+  ├── mysql          :3306     →  外部实例，按第 5 节低资源配置
   ├── volume static
   └── volume uploads
 ```
 
 ## 3. compose 关键约定（写 docker-compose.yml 时遵守）
-- app `depends_on` mysql，并配 healthcheck，待 mysql 就绪再连。
+- app 配 healthcheck；MySQL 使用外部实例，通过 `.env` 的 DB_* 连接。
 - app 通过 `env_file: .env` 注入配置（DB/AI/upload/cors）。
-- mysql 用 `command` 注入低资源参数（见第 5 节）。
-- 三个持久卷：mysql_data、uploads、static。
+- 外部 mysql 用低资源参数（见第 5 节）。
+- 持久卷：uploads；静态资源通过只读挂载或镜像内置提供。
 - 统一 `networks` 内部互通；仅 caddy（或 app）对外暴露端口。
 
 ## 4. 资源评估（2C2G，对应概要 22.3）
@@ -55,11 +55,11 @@ performance_schema=OFF
 ## 7. 启动与初始化顺序
 ```text
 1. cp .env.example .env 并填真实值
-2. docker compose up -d        # 起 mysql + app (+ caddy)
-3. app 启动时：连 mysql → AutoMigrate → 校验并事务化 upsert `SEED_DIR` 下的 data/seed/*.json
+2. docker compose up -d        # 起 app (+ caddy)，MySQL 为外部实例
+3. app 启动时：连 mysql → AutoMigrate → 按 SEED_MODE 决定是否受控导入 seed（默认 off）
 4. 访问：caddy 暴露端口(前端) / app:8080/api(后端)
 ```
-常用命令封装在 Makefile（up/down/build/migrate/seed/logs）。
+常用命令封装在 Makefile（up/down/build/migrate/seed-audit/seed/logs）。
 
 ## 8. 演示稳定性建议
 - 演示前预热：先跑一遍掷骰/对话/生图，确认外部 AI 可用。

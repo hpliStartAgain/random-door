@@ -66,16 +66,30 @@ func main() {
 		&model.Comment{},
 		&model.AITask{},
 		&model.AIUsageLog{},
+		&model.GuessChallenge{},
+		&model.GuessAnswer{},
 	); err != nil {
 		log.Fatalf("auto migrate failed: %v", err)
 	}
 	slog.Info("database migrated")
 
-	// 4. Validate and upsert seed data atomically
-	if err := seed.Load(context.Background(), db, cfg.Server.SeedDir); err != nil {
-		log.Fatalf("seed data failed: %v", err)
+	// 4. Seed import is explicit so the database can remain the catalog source of truth.
+	switch cfg.Server.SeedMode {
+	case "", "off":
+		slog.Info("seed import skipped", "mode", "off")
+	case string(seed.ImportModeBootstrap):
+		if err := seed.Bootstrap(context.Background(), db, cfg.Server.SeedDir); err != nil {
+			log.Fatalf("seed bootstrap failed: %v", err)
+		}
+		slog.Info("seed bootstrap completed")
+	case string(seed.ImportModeSync):
+		if err := seed.Sync(context.Background(), db, cfg.Server.SeedDir); err != nil {
+			log.Fatalf("seed sync failed: %v", err)
+		}
+		slog.Warn("seed sync completed; catalog rows may have been overwritten")
+	default:
+		log.Fatalf("invalid SEED_MODE %q (want off, bootstrap, or sync)", cfg.Server.SeedMode)
 	}
-	slog.Info("seed data synchronized")
 
 	// 5. Build dependencies (manual DI)
 	userRepo := repository.NewUserRepo(db)
@@ -88,6 +102,7 @@ func main() {
 	aiTaskRepo := repository.NewAITaskRepo(db)
 	aiUsageRepo := repository.NewAIUsageRepo(db)
 	commentRepo := repository.NewCommentRepo(db)
+	guessChallengeRepo := repository.NewGuessChallengeRepo(db)
 	adminRepo := repository.NewAdminRepo(db)
 
 	llmClient := ai.NewLLMClient(cfg.LLM.APIBase, cfg.LLM.APIKey, cfg.LLM.Model, cfg.AI.Timeout)
@@ -97,12 +112,14 @@ func main() {
 
 	citySvc := service.NewCityService(cityRepo)
 	visitSvc := service.NewVisitService(userRepo, cityRepo, visitRepo)
+	userSvc := service.NewUserService(userRepo)
 	gameStore := repository.NewGameStore(db, diceRepo, visitRepo)
 	gameSvc := service.NewGameService(userRepo, cityRepo, visitRepo, gameStore)
 	chatSvc := service.NewChatService(cityRepo, chatRepo, llmClient).
 		WithUsageLimit(aiUsageRepo, cfg.AI.ChatDailyLimit)
 	commentSvc := service.NewCommentService(commentRepo, cityRepo)
 	guessSvc := service.NewGuessService(cityRepo, llmClient)
+	guessChallengeSvc := service.NewGuessChallengeService(guessChallengeRepo, cityRepo, storage)
 	achSvc := service.NewAchievementService(db, achRepo)
 	checkinStore := repository.NewCheckinStore(db, checkinRepo)
 	checkinSvc := service.NewCheckinService(userRepo, cityRepo, checkinStore, imageClient, storage).
@@ -114,11 +131,12 @@ func main() {
 
 	handlers := api.Handlers{
 		City:        api.NewCityHandler(citySvc),
+		User:        api.NewUserHandler(userSvc),
 		Visit:       api.NewVisitHandler(visitSvc),
 		Game:        api.NewGameHandler(gameSvc),
 		Chat:        api.NewChatHandler(chatSvc),
 		Comment:     api.NewCommentHandler(commentSvc),
-		Guess:       api.NewGuessHandler(guessSvc),
+		Guess:       api.NewGuessHandler(guessSvc).WithChallengeService(guessChallengeSvc),
 		Checkin:     api.NewCheckinHandler(checkinSvc, validator, storage),
 		Achievement: api.NewAchievementHandler(achSvc),
 		Asset:       api.NewAssetHandler(assetSvc),

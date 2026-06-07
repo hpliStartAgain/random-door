@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/your-org/city-roam/backend/internal/model"
 	"gorm.io/gorm"
@@ -18,6 +19,13 @@ import (
 const (
 	MinCityCount = 12
 	MaxCityCount = 100
+)
+
+type ImportMode string
+
+const (
+	ImportModeBootstrap ImportMode = "bootstrap"
+	ImportModeSync      ImportMode = "sync"
 )
 
 var (
@@ -59,9 +67,10 @@ type City struct {
 }
 
 type POI struct {
-	Name        string `json:"name"`
-	ImageURL    string `json:"image_url"`
-	Description string `json:"description"`
+	Name          string `json:"name"`
+	ImageURL      string `json:"image_url"`
+	Description   string `json:"description"`
+	SoundscapeURL string `json:"soundscape_url"`
 }
 
 type Character struct {
@@ -85,15 +94,37 @@ type Achievement struct {
 	BadgeURL    string `json:"badge_url"`
 }
 
-// Load validates the JSON catalog and upserts it atomically.
+// Load is a legacy alias for Sync.
 func Load(ctx context.Context, db *gorm.DB, dir string) error {
+	return Sync(ctx, db, dir)
+}
+
+// Bootstrap validates the JSON catalog and inserts only missing rows.
+func Bootstrap(ctx context.Context, db *gorm.DB, dir string) error {
+	return Import(ctx, db, dir, ImportModeBootstrap)
+}
+
+// Sync validates the JSON catalog and overwrites matching catalog rows by natural key.
+func Sync(ctx context.Context, db *gorm.DB, dir string) error {
+	return Import(ctx, db, dir, ImportModeSync)
+}
+
+// Import validates the JSON catalog and applies it according to mode.
+func Import(ctx context.Context, db *gorm.DB, dir string, mode ImportMode) error {
 	catalog, err := LoadCatalog(dir)
 	if err != nil {
 		return err
 	}
 
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return upsertCatalog(tx, catalog)
+		switch mode {
+		case ImportModeBootstrap:
+			return bootstrapCatalog(tx, catalog)
+		case ImportModeSync:
+			return upsertCatalog(tx, catalog)
+		default:
+			return fmt.Errorf("unsupported seed import mode %q", mode)
+		}
 	})
 }
 
@@ -241,6 +272,15 @@ func validateCity(city City) error {
 	if !strings.Contains(character.Prompt, "不声称真实复活") || !strings.Contains(character.Prompt, "不编史") {
 		return fmt.Errorf("character prompt in city %q must contain compliance reminders", city.Name)
 	}
+	if err := maxLen("role_title", character.RoleTitle, 128); err != nil {
+		return fmt.Errorf("city %q: %w", city.Name, err)
+	}
+	if err := maxLen("life_span", character.LifeSpan, 64); err != nil {
+		return fmt.Errorf("city %q: %w", city.Name, err)
+	}
+	if err := maxLen("intro_quote", character.IntroQuote, 255); err != nil {
+		return fmt.Errorf("city %q: %w", city.Name, err)
+	}
 	return nil
 }
 
@@ -254,6 +294,9 @@ func validatePOIs(kind, cityName string, pois []POI) error {
 			return err
 		}
 		if err := requireText(kind+" description", poi.Description); err != nil {
+			return err
+		}
+		if err := optionalSoundscapeURL(kind+" soundscape_url", poi.SoundscapeURL); err != nil {
 			return err
 		}
 		names = append(names, poi.Name)
@@ -320,9 +363,27 @@ func requireText(field, value string) error {
 	return nil
 }
 
+// maxLen enforces a max rune length for optional text fields (empty is allowed).
+func maxLen(field, value string, max int) error {
+	if utf8.RuneCountInString(value) > max {
+		return fmt.Errorf("%s must be at most %d characters", field, max)
+	}
+	return nil
+}
+
 func requireStaticURL(field, value string) error {
 	if !strings.HasPrefix(value, "/static/") {
 		return fmt.Errorf("%s must start with /static/", field)
+	}
+	return nil
+}
+
+func optionalSoundscapeURL(field, value string) error {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	if !strings.HasPrefix(value, "/static/soundscapes/") {
+		return fmt.Errorf("%s must start with /static/soundscapes/", field)
 	}
 	return nil
 }
@@ -375,6 +436,20 @@ func upsertCatalog(tx *gorm.DB, catalog Catalog) error {
 	return nil
 }
 
+func bootstrapCatalog(tx *gorm.DB, catalog Catalog) error {
+	for _, citySeed := range catalog.Cities {
+		if err := bootstrapCity(tx, citySeed); err != nil {
+			return err
+		}
+	}
+	for _, achievementSeed := range catalog.Achievements {
+		if err := bootstrapAchievement(tx, achievementSeed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func upsertCity(tx *gorm.DB, source City) error {
 	existingCity, err := findExistingCity(tx, source.Name)
 	if err != nil {
@@ -415,14 +490,15 @@ func upsertCity(tx *gorm.DB, source City) error {
 			return fmt.Errorf("load existing landmark %q for city %q: %w", landmark.Name, source.Name, err)
 		}
 		row := model.Landmark{
-			CityID:      city.ID,
-			Name:        landmark.Name,
-			ImageURL:    seedAssetURL(existingLandmark.ImageURL, landmark.ImageURL),
-			Description: ptr(landmark.Description),
+			CityID:        city.ID,
+			Name:          landmark.Name,
+			ImageURL:      seedAssetURL(existingLandmark.ImageURL, landmark.ImageURL),
+			Description:   ptr(landmark.Description),
+			SoundscapeURL: nilIfEmpty(landmark.SoundscapeURL),
 		}
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "city_id"}, {Name: "name"}},
-			DoUpdates: clause.AssignmentColumns([]string{"image_url", "description"}),
+			DoUpdates: clause.AssignmentColumns([]string{"image_url", "description", "soundscape_url"}),
 		}).Create(&row).Error; err != nil {
 			return fmt.Errorf("upsert landmark %q for city %q: %w", landmark.Name, source.Name, err)
 		}
@@ -470,6 +546,85 @@ func upsertCity(tx *gorm.DB, source City) error {
 			}),
 		}).Create(&row).Error; err != nil {
 			return fmt.Errorf("upsert character %q for city %q: %w", character.Name, source.Name, err)
+		}
+	}
+	return nil
+}
+
+func bootstrapCity(tx *gorm.DB, source City) error {
+	city := model.City{
+		Name:               source.Name,
+		Province:           source.Province,
+		Lat:                source.Lat,
+		Lng:                source.Lng,
+		Intro:              ptr(source.Intro),
+		CoverImageURL:      ptr(source.CoverImageURL),
+		DialectSample:      ptr(source.DialectSample),
+		DialectExplanation: ptr(source.DialectExplanation),
+	}
+	if err := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "name"}},
+		DoNothing: true,
+	}).Create(&city).Error; err != nil {
+		return fmt.Errorf("bootstrap city %q: %w", source.Name, err)
+	}
+	if err := tx.Where("name = ?", source.Name).First(&city).Error; err != nil {
+		return fmt.Errorf("reload city %q: %w", source.Name, err)
+	}
+
+	for _, tag := range source.Tags {
+		row := model.CityTag{CityID: city.ID, Tag: tag}
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&row).Error; err != nil {
+			return fmt.Errorf("bootstrap tag %q for city %q: %w", tag, source.Name, err)
+		}
+	}
+	for _, landmark := range source.Landmarks {
+		row := model.Landmark{
+			CityID:        city.ID,
+			Name:          landmark.Name,
+			ImageURL:      ptr(landmark.ImageURL),
+			Description:   ptr(landmark.Description),
+			SoundscapeURL: nilIfEmpty(landmark.SoundscapeURL),
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "city_id"}, {Name: "name"}},
+			DoNothing: true,
+		}).Create(&row).Error; err != nil {
+			return fmt.Errorf("bootstrap landmark %q for city %q: %w", landmark.Name, source.Name, err)
+		}
+	}
+	for _, food := range source.Foods {
+		row := model.Food{
+			CityID:      city.ID,
+			Name:        food.Name,
+			ImageURL:    ptr(food.ImageURL),
+			Description: ptr(food.Description),
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "city_id"}, {Name: "name"}},
+			DoNothing: true,
+		}).Create(&row).Error; err != nil {
+			return fmt.Errorf("bootstrap food %q for city %q: %w", food.Name, source.Name, err)
+		}
+	}
+	for _, character := range source.Characters {
+		row := model.Character{
+			CityID:        city.ID,
+			Name:          character.Name,
+			CharacterType: character.CharacterType,
+			AvatarURL:     ptr(character.AvatarURL),
+			Persona:       character.Persona,
+			DialectStyle:  ptr(character.DialectStyle),
+			Prompt:        character.Prompt,
+			RoleTitle:     nilIfEmpty(character.RoleTitle),
+			LifeSpan:      nilIfEmpty(character.LifeSpan),
+			IntroQuote:    nilIfEmpty(character.IntroQuote),
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "city_id"}, {Name: "name"}},
+			DoNothing: true,
+		}).Create(&row).Error; err != nil {
+			return fmt.Errorf("bootstrap character %q for city %q: %w", character.Name, source.Name, err)
 		}
 	}
 	return nil
@@ -527,6 +682,24 @@ func upsertAchievement(tx *gorm.DB, source Achievement) error {
 		}),
 	}).Create(&row).Error; err != nil {
 		return fmt.Errorf("upsert achievement %q: %w", source.Code, err)
+	}
+	return nil
+}
+
+func bootstrapAchievement(tx *gorm.DB, source Achievement) error {
+	row := model.Achievement{
+		Code:        source.Code,
+		Name:        source.Name,
+		Description: ptr(source.Description),
+		RuleType:    source.RuleType,
+		RuleValue:   source.RuleValue,
+		BadgeURL:    ptr(source.BadgeURL),
+	}
+	if err := tx.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "code"}},
+		DoNothing: true,
+	}).Create(&row).Error; err != nil {
+		return fmt.Errorf("bootstrap achievement %q: %w", source.Code, err)
 	}
 	return nil
 }

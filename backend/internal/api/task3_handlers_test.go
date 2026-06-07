@@ -25,6 +25,7 @@ type task3CityRepository struct {
 	listLandmarks  func(context.Context, int64) ([]model.Landmark, error)
 	listFoods      func(context.Context, int64) ([]model.Food, error)
 	listCharacters func(context.Context, int64) ([]model.Character, error)
+	listAllCounts  func(context.Context) (map[int64]model.CityCounts, error)
 }
 
 func (r *task3CityRepository) ListAll(ctx context.Context) ([]model.City, error) {
@@ -67,6 +68,13 @@ func (r *task3CityRepository) ListCharacters(ctx context.Context, cityID int64) 
 		return nil, errors.New("unexpected ListCharacters call")
 	}
 	return r.listCharacters(ctx, cityID)
+}
+
+func (r *task3CityRepository) ListAllCounts(ctx context.Context) (map[int64]model.CityCounts, error) {
+	if r.listAllCounts != nil {
+		return r.listAllCounts(ctx)
+	}
+	return map[int64]model.CityCounts{}, nil
 }
 
 type task3UserRepository struct {

@@ -13,17 +13,25 @@ import { RandomCityModal } from './components/overlays/RandomCityModal';
 import { Toast } from './components/Toast';
 import { AdminPage } from './pages/AdminPage';
 import { ProfilePanel } from './components/ProfilePanel';
+import { GuessChallengePage } from './pages/GuessChallengePage';
 
 function App() {
   const initUser = useUserStore((state) => state.initUser);
   const { canvasMode, currentView, hasEntered } = useViewStore();
   const [showAdmin, setShowAdmin] = useState(false);
+  const guessCode = new URLSearchParams(window.location.search).get('guess');
 
   useEffect(() => {
     initUser();
   }, [initUser]);
 
   return (
+    guessCode ? (
+      <>
+        <GuessChallengePage code={guessCode} />
+        <Toast />
+      </>
+    ) : (
     <div className="relative w-screen h-screen overflow-hidden bg-background">
       <Navbar onAdmin={() => setShowAdmin(true)} />
       
@@ -83,6 +91,7 @@ function App() {
       {/* 全局 Toast 通知 */}
       <Toast />
     </div>
+    )
   );
 }
 

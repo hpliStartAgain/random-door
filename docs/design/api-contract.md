@@ -82,12 +82,16 @@
       "lat": 39.9042,
       "lng": 116.4074,
       "cover_image_url": "/static/landmarks/beijing_forbidden_city.jpg",
-      "tags": ["ancient_capital", "north_china"]
+      "tags": ["ancient_capital", "north_china"],
+      "landmark_count": 2,
+      "food_count": 2,
+      "character_count": 1
     }
   ]
 }
 ```
 **用途**：自由探索地图打点 + 游戏模式候选城市集合。
+**字段说明**：`landmark_count` / `food_count` / `character_count` 为后端按城市聚合的内容数量（用于发现页信息密度展示）。三者均为非负整数，缺省 0；前端缺字段时按 0 处理，保持旧后端兼容。
 
 ---
 
@@ -109,19 +113,21 @@
   "dialect_explanation": "陕西关中方言，表示很好、很棒。",
   "tags": ["ancient_capital", "northwest"],
   "landmarks": [
-    { "id": 12, "name": "兵马俑", "image_url": "/static/landmarks/bmy.jpg", "description": "..." }
+    { "id": 12, "name": "兵马俑", "image_url": "/static/landmarks/bmy.jpg", "description": "...", "soundscape_url": "/static/soundscapes/xian_bingmayong.wav" }
   ],
   "foods": [
     { "id": 5, "name": "肉夹馍", "image_url": "/static/foods/rjm.jpg", "description": "..." }
   ],
   "characters": [
-    { "id": 8, "name": "唐代长安书生", "character_type": "history", "avatar_url": "/static/characters/c8.jpg", "dialect_style": "关中话" }
+    { "id": 8, "name": "唐代长安书生", "character_type": "history", "avatar_url": "/static/characters/c8.jpg", "dialect_style": "关中话", "role_title": "长安城里的读书人", "life_span": "唐·开元年间", "intro_quote": "客官从长安城外来？且听我说说这盛世气象。" }
   ]
 }
 ```
 **错误**：city 不存在 → 404 NOT_FOUND。
 **错误**：city_id 不是正整数 → 400 INVALID_PARAM。
 **注意**：响应中 characters 不返回 persona / prompt（敏感，仅后端组装 Prompt 用）。
+**字段说明**：`role_title`（身份，≤128 字）/ `life_span`（年代，≤64 字）/ `intro_quote`（角色口吻引导语，≤255 字）均为可选字段，缺省不下发（omitempty）。`intro_quote` 必须是角色口吻的引导文案，不得写成确定性史实断言，也不得声称人物真实复活。
+`soundscape_url` 为可选地标声景音频，只允许本地 `/static/soundscapes/...` 路径；前端必须由用户点击后播放，不自动播放。
 
 ---
 
@@ -311,6 +317,89 @@ lat/lng 可选；缺省时用默认位置（北京）。
 
 ---
 
+## 7.3 猜位置挑战链接
+
+用户可把当前街景截图和文案保存为匿名挑战，朋友打开链接后提交猜测。
+
+### POST /api/guess/challenges
+
+**请求**
+```json
+{
+  "user_id": 1,
+  "city_id": 3,
+  "target_name": "兵马俑",
+  "image_url": "/static/landmarks/xian_landmark_1.png",
+  "image_data_url": "data:image/png;base64,...",
+  "caption": "猜猜我在哪？#任意门漫游# #西安#"
+}
+```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| user_id | int64 | 否 | 匿名用户 id |
+| city_id | int64 | 是 | 正整数 |
+| target_name | string | 否 | 当前地标/城市名，最长 128 字 |
+| image_url | string | 否 | 本地 `/static/...` 或 `/uploads/...` 图片路径 |
+| image_data_url | string | 否 | data URL 图片；支持 png/jpeg/webp，≤5MB。存在时优先落本地 `/uploads/guess/...` |
+| caption | string | 否 | 分享文案，最长 300 字 |
+
+**响应 201**
+```json
+{
+  "code": "A1B2C3D4",
+  "share_url": "/?guess=A1B2C3D4",
+  "city_id": 3,
+  "target_name": "兵马俑",
+  "image_url": "/uploads/guess/uuid.png",
+  "caption": "猜猜我在哪？#任意门漫游# #西安#",
+  "created_at": "2026-05-30T09:39:23+08:00",
+  "expires_at": "2026-06-06T09:39:23+08:00"
+}
+```
+
+### GET /api/guess/challenges/{code}
+
+**响应 200**
+```json
+{
+  "code": "A1B2C3D4",
+  "city_id": 3,
+  "city_name": "西安",
+  "target_name": "兵马俑",
+  "image_url": "/uploads/guess/uuid.png",
+  "caption": "猜猜我在哪？#任意门漫游# #西安#",
+  "created_at": "2026-05-30T09:39:23+08:00",
+  "expires_at": "2026-06-06T09:39:23+08:00"
+}
+```
+**错误**：挑战不存在或已过期 → 404 NOT_FOUND。
+
+### POST /api/guess/challenges/{code}/answers
+
+**请求**
+```json
+{ "answer_text": "西安" }
+```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| answer_text | string | 是 | 1~64 字 |
+
+**响应 201**
+```json
+{
+  "answer_id": 1,
+  "is_correct": true,
+  "answer_text": "西安",
+  "city_name": "西安",
+  "target_name": "兵马俑",
+  "message": "猜对了，这里是西安。"
+}
+```
+
+**逻辑**：挑战 code 不暴露 user_id；答案命中城市名或 target_name 即视为正确，后续可扩展模糊匹配。
+
+---
+
 ## 8. POST /api/checkin/generate-image — 生成赛博打卡图
 
 **Content-Type**：`multipart/form-data`
@@ -452,6 +541,44 @@ lat/lng 可选；缺省时用默认位置（北京）。
 
 ---
 
+## 10.2 匿名用户 Profile
+
+### GET /api/users/{user_id}/profile
+
+**响应 200**
+```json
+{
+  "user_id": 1,
+  "anonymous_id": "browser_generated_uuid",
+  "nickname": "北京游客",
+  "avatar_url": "/static/avatars/default.png",
+  "age": 28,
+  "home_region": "广东",
+  "current_city_id": 3
+}
+```
+
+### PATCH /api/users/{user_id}/profile
+
+**请求**
+```json
+{
+  "nickname": "北京游客",
+  "age": 28,
+  "home_region": "广东"
+}
+```
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| nickname | string | 否 | 1~64 字；缺省不修改 |
+| age | int | 否 | 1~120；缺省不修改 |
+| home_region | string | 否 | 1~64 字；缺省不修改 |
+
+**响应 200**：同 GET profile。
+**错误**：user 不存在 → 404；字段为空或越界 → 400。
+
+---
+
 ## 11. Admin 内容 CMS（ADMIN_TOKEN）
 
 Admin 接口均需 `X-Admin-Token` 或 `Authorization: Bearer <token>`。
@@ -548,9 +675,11 @@ URL 绑定接口不再保存远程 URL。`PATCH .../image` 或 `PATCH .../cover-
 | /chat | chat_messages, characters, cities |
 | /comments | comments, landmarks, foods, characters |
 | /guess/caption | cities, landmarks, foods, characters |
+| /guess/challenges | guess_challenges, guess_answers, cities, uploads/guess |
 | /checkin/generate-image | ai_tasks, ai_usage_logs, uploads/selfies |
 | /checkin/image-tasks/{id} | ai_tasks |
 | /checkin | checkins, user_achievements, achievements |
 | /users/{id}/achievements | achievements, user_achievements |
 | /users/{id}/assets | city_visits, checkins, cities, landmarks, achievements |
+| /users/{id}/profile | users |
 | /admin/* | cities, city_tags, landmarks, foods, characters |
