@@ -4,6 +4,8 @@ import type { UserAssetsResponse } from '../api/types';
 import { useUserStore } from '../store/useUserStore';
 import { useViewStore } from '../store/useViewStore';
 import { foxImages } from '../assets/foxImages';
+import { ProfileVisitedList } from '../components/ProfileVisitedList';
+import { ProfilePosterGrid } from '../components/ProfilePosterGrid';
 
 export const AssetPage: React.FC = () => {
   const { setView } = useViewStore();
@@ -46,44 +48,12 @@ export const AssetPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <section className="glass-panel p-5 rounded-2xl border border-border">
           <h2 className="font-bold text-base mb-3">走过城市</h2>
-          <div className="space-y-2 max-h-[520px] overflow-y-auto">
-            {data?.visited_cities.length ? data.visited_cities.map(city => (
-              <div key={`${city.id}-${city.visited_at}`} className="p-3 rounded-xl border border-border bg-background/70">
-                <div className="font-semibold text-sm">{city.name}</div>
-                <div className="text-xs text-muted-foreground">{city.province} · {new Date(city.visited_at).toLocaleDateString()}</div>
-              </div>
-            )) : (
-              <div className="flex flex-col items-center py-8 gap-3">
-                <img
-                  src={foxImages.postcardBoard}
-                  alt="暂无记录"
-                  className="w-28 h-20 object-contain opacity-60"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                />
-                <p className="text-sm text-muted-foreground text-center">
-                  还没有城市收藏<br/>
-                  <span className="text-xs">先开启一次任意门吧</span>
-                </p>
-              </div>
-            )}
-          </div>
+          <ProfileVisitedList cities={data?.visited_cities ?? []} compact={false} />
         </section>
 
         <section className="glass-panel p-5 rounded-2xl border border-border lg:col-span-2">
           <h2 className="font-bold text-base mb-3">打卡海报</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {data?.posters.length ? data.posters.map(poster => (
-              <article key={poster.checkin_id} className="rounded-xl overflow-hidden border border-border bg-background/70">
-                <img src={poster.generated_image_url} alt={`${poster.city_name}打卡海报`} className="w-full aspect-[4/3] object-cover" />
-                <div className="p-3">
-                  <div className="font-semibold text-sm">{poster.city_name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {poster.landmark_name || '城市打卡'} · {new Date(poster.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </article>
-            )) : <div className="text-sm text-muted-foreground">还没有生成海报</div>}
-          </div>
+          <ProfilePosterGrid posters={data?.posters ?? []} compact={false} />
         </section>
 
         <section className="glass-panel p-5 rounded-2xl border border-border lg:col-span-3">

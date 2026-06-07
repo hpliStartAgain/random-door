@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Camera, Copy, Sparkles, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Camera, Sparkles, X } from 'lucide-react';
 import { useViewStore } from '../store/useViewStore';
 import { useUserStore } from '../store/useUserStore';
 import { api } from '../api';
@@ -7,6 +7,7 @@ import type { CityDetail, GuessCaptionResponse } from '../api/types';
 import { CheckinFlow } from './CheckinFlow';
 import { AchievementUnlock } from './overlays/AchievementUnlock';
 import type { Achievement } from './overlays/AchievementUnlock';
+import { GuessChallengeModal } from './GuessChallengeModal';
 
 export const StreetViewCanvas: React.FC = () => {
   const { setCanvasMode, streetTarget } = useViewStore();
@@ -14,22 +15,17 @@ export const StreetViewCanvas: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [shotUrl, setShotUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState<GuessCaptionResponse | null>(null);
-  const [captionMode, setCaptionMode] = useState<'weibo' | 'moments'>('weibo');
   const [loadingCaption, setLoadingCaption] = useState(false);
   const [loadingCheckin, setLoadingCheckin] = useState(false);
   const [checkinCity, setCheckinCity] = useState<CityDetail | null>(null);
   const [sceneFile, setSceneFile] = useState<File | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([]);
-  const [copyDone, setCopyDone] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const panoramaUrl = streetTarget?.cover_image_url || '/static/landmarks/beijing_cover.png';
   const targetName = streetTarget?.name || '未知异境';
   const captionCityId = streetTarget?.city_id || streetTarget?.id;
-  const activeCaption = useMemo(() => {
-    if (!caption) return '';
-    return captionMode === 'weibo' ? caption.weibo : caption.moments;
-  }, [caption, captionMode]);
 
   const captureCurrentView = () => {
     let nextShot = '';
@@ -73,7 +69,6 @@ export const StreetViewCanvas: React.FC = () => {
     captureCurrentView();
     setLoadingCaption(true);
     setError(null);
-    setCopyDone(false);
     try {
       const res = await api.generateGuessCaption({
         user_id: userId,
@@ -82,21 +77,11 @@ export const StreetViewCanvas: React.FC = () => {
         scene_hint: `全景截图视角：${targetName}`,
       });
       setCaption(res);
+      setShowChallengeModal(true);
     } catch (e: any) {
       setError(e?.message || '文案生成失败');
     } finally {
       setLoadingCaption(false);
-    }
-  };
-
-  const handleCopy = async () => {
-    if (!activeCaption) return;
-    try {
-      await navigator.clipboard.writeText(activeCaption);
-      setCopyDone(true);
-      window.setTimeout(() => setCopyDone(false), 1400);
-    } catch {
-      setError('复制失败');
     }
   };
 
@@ -179,41 +164,6 @@ export const StreetViewCanvas: React.FC = () => {
               {loadingCheckin ? '准备中…' : '生成赛博打卡'}
             </button>
 
-            {shotUrl && (
-              <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                <img src={shotUrl} alt="全景截图预览" className="w-full h-28 object-cover" />
-              </div>
-            )}
-
-            {caption && (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-1 rounded-lg bg-white/8 p-1">
-                  <button
-                    onClick={() => setCaptionMode('weibo')}
-                    className={`py-1.5 rounded-md text-xs font-semibold transition-colors ${captionMode === 'weibo' ? 'bg-white text-[#22302C]' : 'text-white/70 hover:text-white'}`}
-                  >
-                    微博
-                  </button>
-                  <button
-                    onClick={() => setCaptionMode('moments')}
-                    className={`py-1.5 rounded-md text-xs font-semibold transition-colors ${captionMode === 'moments' ? 'bg-white text-[#22302C]' : 'text-white/70 hover:text-white'}`}
-                  >
-                    朋友圈
-                  </button>
-                </div>
-                <div className="rounded-xl bg-white/10 border border-white/10 p-3 text-sm leading-relaxed text-white/90">
-                  {activeCaption}
-                </div>
-                <button
-                  onClick={handleCopy}
-                  className="w-full py-2 rounded-lg border border-white/15 hover:bg-white/10 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  {copyDone ? '已复制' : '复制文案'}
-                </button>
-              </div>
-            )}
-
             {error && <div className="text-xs text-red-200 bg-red-500/12 border border-red-300/20 rounded-lg px-3 py-2">{error}</div>}
           </div>
         </div>
@@ -242,6 +192,14 @@ export const StreetViewCanvas: React.FC = () => {
           onClose={() => setUnlockedAchievements([])}
         />
       )}
+
+      <GuessChallengeModal
+        isOpen={showChallengeModal}
+        onClose={() => setShowChallengeModal(false)}
+        shotUrl={shotUrl}
+        caption={caption}
+        targetName={targetName}
+      />
     </div>
   );
 };

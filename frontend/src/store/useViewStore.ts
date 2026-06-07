@@ -34,6 +34,8 @@ interface ViewState {
   closeDrawer: () => void;
   enter: () => void;
   setRollPhase: (phase: RollPhase) => void;
+  profileOpen: boolean;
+  setProfileOpen: (open: boolean) => void;
 }
 
 export const useViewStore = create<ViewState>((set) => ({
@@ -44,6 +46,7 @@ export const useViewStore = create<ViewState>((set) => ({
   drawer: { isOpen: false, type: null, data: null },
   hasEntered: false,
   rollPhase: 'idle',
+  profileOpen: false,
   setView: (view, cityId) => set({ currentView: view, activeCityId: cityId ?? null }),
   setCanvasMode: (mode, target) => set((state) => ({ 
     canvasMode: mode, 
@@ -53,4 +56,5 @@ export const useViewStore = create<ViewState>((set) => ({
   closeDrawer: () => set((state) => ({ drawer: { ...state.drawer, isOpen: false } })),
   enter: () => set({ hasEntered: true }),
   setRollPhase: (phase) => set({ rollPhase: phase }),
+  setProfileOpen: (open) => set({ profileOpen: open }),
 }));

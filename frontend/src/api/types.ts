@@ -19,6 +19,9 @@ export interface CityListItem {
   lng: number;
   cover_image_url?: string;
   tags: string[];
+  landmark_count?: number;
+  food_count?: number;
+  character_count?: number;
 }
 
 export interface CityListResponse {
@@ -45,6 +48,9 @@ export interface Character {
   character_type: string;
   avatar_url?: string;
   dialect_style?: string;
+  role_title?: string;
+  life_span?: string;
+  intro_quote?: string;
 }
 
 export interface CityDetail {

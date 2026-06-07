@@ -23,11 +23,31 @@ function foxMarkerContent(label?: string, pulse = false): HTMLDivElement {
   return markerDiv;
 }
 
+function cityMarkerContent(name: string, isActive: boolean): string {
+  if (isActive) {
+    return `
+      <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+        <div style="position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;background:rgba(43,58,54,0.18);animation:mapLandPulse 1.2s ease-out infinite;"></div>
+        <div class="px-3 py-1 backdrop-blur rounded-full text-xs font-bold shadow-md cursor-pointer flex items-center gap-1 transition-colors" style="background:#2B3A36;color:#fff;border:1.5px solid #2B3A36;z-index:1;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#C29F60;display:inline-block;flex-shrink:0;"></span>
+          ${name}
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="px-3 py-1 bg-[#F5F3EB]/90 backdrop-blur border border-[#E5E0D5] text-[#2B3A36] rounded-full text-xs font-bold shadow-md cursor-pointer hover:bg-white transition-colors flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-[#C29F60]"></span>
+      ${name}
+    </div>
+  `;
+}
+
 export const MapCanvas: React.FC = () => {
   const { setMapContext, flyTo } = useMapStore();
   const { filteredCities, searchQuery } = useCityStore();
   const { lastRoll, fromPoint } = useGameStore();
-  const { rollPhase } = useViewStore();
+  const { rollPhase, activeCityId } = useViewStore();
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [error, setError] = useState<string>('');
@@ -103,17 +123,14 @@ export const MapCanvas: React.FC = () => {
 
     const citiesToShow = filteredCities();
     citiesToShow.forEach(city => {
-      const markerContent = `
-        <div class="px-3 py-1 bg-[#F5F3EB]/90 backdrop-blur border border-[#E5E0D5] text-[#2B3A36] rounded-full text-xs font-bold shadow-md cursor-pointer hover:bg-white transition-colors flex items-center gap-1">
-          <span class="w-2 h-2 rounded-full bg-[#C29F60]"></span>
-          ${city.name}
-        </div>
-      `;
+      const isActive = city.id === activeCityId;
+      const markerContent = cityMarkerContent(city.name, isActive);
       
       const marker = new AMap.Marker({
         position: [city.lng, city.lat],
         content: markerContent,
-        offset: new AMap.Pixel(-20, -15)
+        offset: new AMap.Pixel(-20, -15),
+        zIndex: isActive ? 160 : 100,
       });
       
       marker.on('click', () => {
@@ -132,7 +149,7 @@ export const MapCanvas: React.FC = () => {
     });
     mapInstance.add(userMarker);
     baseLayersRef.current.push(userMarker);
-  }, [map, searchQuery, filteredCities, flyTo, userPosition]);
+  }, [map, searchQuery, filteredCities, flyTo, userPosition, activeCityId]);
 
   useEffect(() => {
     const { mapInstance, AMap } = useMapStore.getState();

@@ -12,6 +12,7 @@ import { WelcomeOverlay } from './components/overlays/WelcomeOverlay';
 import { RandomCityModal } from './components/overlays/RandomCityModal';
 import { Toast } from './components/Toast';
 import { AdminPage } from './pages/AdminPage';
+import { ProfilePanel } from './components/ProfilePanel';
 
 function App() {
   const initUser = useUserStore((state) => state.initUser);
@@ -75,6 +76,9 @@ function App() {
 
       {/* 后台管理 */}
       {showAdmin && <AdminPage onClose={() => setShowAdmin(false)} />}
+
+      {/* 个人足迹侧滑面板 */}
+      <ProfilePanel />
 
       {/* 全局 Toast 通知 */}
       <Toast />

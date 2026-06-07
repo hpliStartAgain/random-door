@@ -7,12 +7,15 @@ import type { CommentTargetType } from '../api/types';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
-const SUGGESTED_QUESTIONS = [
-  '请做个自我介绍',
-  '这里最值得一看的是什么？',
-  '这座城市有什么历史典故？',
-  '你最难忘的经历是什么？',
-];
+function getSuggestedQuestions(charType?: string): string[] {
+  if (charType === 'history') {
+    return ['请做个自我介绍', '你所处的时代是什么样的？', '这座城市在你那个年代有何特别？', '你最得意的事是什么？'];
+  }
+  if (charType === 'culture') {
+    return ['请介绍一下你代表的文化', '当地有哪些必体验的风俗？', '有什么地道的饮食推荐？', '本地人最引以为傲的是什么？'];
+  }
+  return ['请做个自我介绍', '这里最值得一看的是什么？', '这座城市有什么历史典故？', '你最难忘的经历是什么？'];
+}
 
 export const RightDrawer: React.FC = () => {
   const { drawer, closeDrawer, activeCityId } = useViewStore();
@@ -31,9 +34,18 @@ export const RightDrawer: React.FC = () => {
     if (isOpen && drawer.type === 'chat' && drawer.data) {
       setChatInput('');
       const char = drawer.data;
-      const greeting = char.character_type === 'history'
-        ? `汝好！吾乃${char.name}，久候矣。有何要叙？`
-        : `你好！我是${char.name}。${char.dialect_style ? `（${char.dialect_style}）` : ''} 有什么想聊的？`;
+      const buildGreeting = (c: any): string => {
+        const rolePart = c.role_title ? `，${c.role_title}` : '';
+        const spanPart = c.life_span ? `（${c.life_span}）` : '';
+        if (c.character_type === 'history') {
+          return `${spanPart}${c.name}${rolePart}在此。有何要问，请直言。`;
+        }
+        if (c.character_type === 'culture') {
+          return `你好！我是${c.name}${rolePart}。${c.dialect_style ? c.dialect_style + '，' : ''}有什么想聊？`;
+        }
+        return `你好！我是${c.name}。${c.dialect_style ? `（${c.dialect_style}）` : ''} 有什么想聊的？`;
+      };
+      const greeting = buildGreeting(char);
       setMessages([{ role: 'assistant', content: greeting }]);
     }
   }, [isOpen, drawer.data?.id]);
@@ -170,7 +182,7 @@ export const RightDrawer: React.FC = () => {
 
               {!loading && messages.length <= 1 && (
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {SUGGESTED_QUESTIONS.map(q => (
+                  {getSuggestedQuestions(drawer.data?.character_type).map(q => (
                     <button key={q} onClick={() => handleSend(q)}
                       className="text-xs px-3 py-1.5 rounded-full bg-secondary hover:bg-primary/10 border border-border hover:border-primary/30 text-foreground/70 hover:text-primary transition-colors">
                       {q}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { User } from 'lucide-react';
 import { useViewStore } from '../../store/useViewStore';
 
 interface NavbarProps {
@@ -6,7 +7,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onAdmin }) => {
-  const { setView } = useViewStore();
+  const { setView, setProfileOpen } = useViewStore();
 
   return (
     <header className="absolute top-0 left-0 w-full h-[60px] bg-background/90 backdrop-blur-md border-b border-border z-30 flex items-center justify-between px-6 shadow-sm">
@@ -19,10 +20,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onAdmin }) => {
       
       <div className="flex items-center gap-4">
         <button
-          onClick={() => setView('ASSETS')}
-          className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+          onClick={() => setProfileOpen(true)}
+          title="我的足迹"
+          className="w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground hover:bg-card hover:text-primary transition-colors"
         >
-          我的资产
+          <User className="h-4 w-4" />
         </button>
         <button 
           onClick={() => setView('ACHIEVEMENT')}

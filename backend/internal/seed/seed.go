@@ -71,6 +71,9 @@ type Character struct {
 	Persona       string `json:"persona"`
 	DialectStyle  string `json:"dialect_style"`
 	Prompt        string `json:"prompt"`
+	RoleTitle     string `json:"role_title"`
+	LifeSpan      string `json:"life_span"`
+	IntroQuote    string `json:"intro_quote"`
 }
 
 type Achievement struct {
@@ -455,11 +458,15 @@ func upsertCity(tx *gorm.DB, source City) error {
 			Persona:       character.Persona,
 			DialectStyle:  ptr(character.DialectStyle),
 			Prompt:        character.Prompt,
+			RoleTitle:     nilIfEmpty(character.RoleTitle),
+			LifeSpan:      nilIfEmpty(character.LifeSpan),
+			IntroQuote:    nilIfEmpty(character.IntroQuote),
 		}
 		if err := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "city_id"}, {Name: "name"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"character_type", "avatar_url", "persona", "dialect_style", "prompt",
+				"role_title", "life_span", "intro_quote",
 			}),
 		}).Create(&row).Error; err != nil {
 			return fmt.Errorf("upsert character %q for city %q: %w", character.Name, source.Name, err)
@@ -534,4 +541,11 @@ func seedAssetURL(existing *string, seeded string) *string {
 
 func ptr(value string) *string {
 	return &value
+}
+
+func nilIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

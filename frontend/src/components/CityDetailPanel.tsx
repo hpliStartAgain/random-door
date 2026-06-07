@@ -13,7 +13,7 @@ interface Props {
 }
 
 export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
-  const { resetView } = useMapStore();
+  const { resetView, flyTo } = useMapStore();
   const { openDrawer, setCanvasMode } = useViewStore();
   const [mounted, setMounted] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
@@ -99,7 +99,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
               {city.landmarks.map(lm => (
                 <div
                   key={lm.id}
-                  onClick={() => openDrawer('gallery', { ...lm, target_type: 'landmark' })}
+                  onClick={() => { flyTo(city.lng, city.lat, 15); openDrawer('gallery', { ...lm, target_type: 'landmark' }); }}
                   className="flex gap-3 rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all cursor-pointer"
                 >
                   {lm.image_url ? (
@@ -126,7 +126,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                       }}
                       className="mt-2 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/15 hover:bg-primary/15 transition-colors"
                     >
-                      查看图片
+                      进入地标视角
                     </button>
                   </div>
                 </div>
@@ -145,24 +145,37 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                   key={char.id}
                   type="button"
                   onClick={() => openDrawer('chat', char)}
-                  className="w-full flex items-center gap-3 rounded-xl border border-border/60 p-3 hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group text-left"
+                  className="w-full text-left rounded-xl border border-border/60 p-4 hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group bg-card/50"
                   aria-label={`与${char.name}对话`}
                 >
-                  <div className="w-12 h-12 rounded-full shrink-0 bg-gradient-to-br from-primary/20 to-accent/30 flex items-center justify-center overflow-hidden">
-                    {char.avatar_url ? (
-                      <img src={mediaUrl(char.avatar_url)} alt={char.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xl">🎎</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-serif-display font-semibold text-base">{char.name}</h4>
-                      <span className="pill bg-primary/10 text-primary">{char.character_type === 'culture' ? '文化符号' : char.character_type}</span>
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-11 h-11 rounded-full shrink-0 bg-gradient-to-br from-primary/20 to-accent/30 flex items-center justify-center overflow-hidden border border-border/40">
+                      {char.avatar_url ? (
+                        <img src={mediaUrl(char.avatar_url)} alt={char.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg">🎎</span>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{char.dialect_style}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="font-serif-display font-semibold text-sm text-foreground">{char.name}</h4>
+                        {char.role_title && <span className="text-[10px] text-muted-foreground">· {char.role_title}</span>}
+                        {char.life_span && <span className="pill bg-accent/10 text-accent text-[10px]">{char.life_span}</span>}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {char.character_type === 'culture' ? '文化符号' : char.character_type === 'history' ? '历史人物' : char.character_type}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground group-hover:text-primary transition-colors text-xs mt-1 shrink-0">对话 →</span>
                   </div>
-                  <span className="text-muted-foreground group-hover:text-primary transition-colors text-sm">&rarr;</span>
+                  {char.intro_quote && (
+                    <blockquote className="border-l-2 border-primary/30 pl-3 text-xs text-foreground/70 italic leading-relaxed line-clamp-2">
+                      "{char.intro_quote}"
+                    </blockquote>
+                  )}
+                  {!char.intro_quote && char.dialect_style && (
+                    <p className="text-xs text-muted-foreground line-clamp-1 pl-1">{char.dialect_style}</p>
+                  )}
                 </button>
               ))}
             </div>

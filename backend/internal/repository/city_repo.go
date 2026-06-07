@@ -7,6 +7,38 @@ import (
 	"gorm.io/gorm"
 )
 
+type countRow struct {
+	CityID int64 `gorm:"column:city_id"`
+	Count  int   `gorm:"column:count"`
+}
+
+// ListAllCounts returns landmark / food / character counts for all cities in one batch (3 queries).
+func (r *CityRepo) ListAllCounts(ctx context.Context) (map[int64]model.CityCounts, error) {
+	result := make(map[int64]model.CityCounts)
+
+	var lm, food, char []countRow
+	if err := r.DB.WithContext(ctx).Table("landmarks").Select("city_id, COUNT(*) AS count").Group("city_id").Scan(&lm).Error; err != nil {
+		return nil, err
+	}
+	if err := r.DB.WithContext(ctx).Table("foods").Select("city_id, COUNT(*) AS count").Group("city_id").Scan(&food).Error; err != nil {
+		return nil, err
+	}
+	if err := r.DB.WithContext(ctx).Table("characters").Select("city_id, COUNT(*) AS count").Group("city_id").Scan(&char).Error; err != nil {
+		return nil, err
+	}
+
+	for _, row := range lm {
+		c := result[row.CityID]; c.LandmarkCount = row.Count; result[row.CityID] = c
+	}
+	for _, row := range food {
+		c := result[row.CityID]; c.FoodCount = row.Count; result[row.CityID] = c
+	}
+	for _, row := range char {
+		c := result[row.CityID]; c.CharacterCount = row.Count; result[row.CityID] = c
+	}
+	return result, nil
+}
+
 type CityRepo struct {
 	DB *gorm.DB
 }

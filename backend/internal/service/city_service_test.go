@@ -18,6 +18,7 @@ type fakeCityRepository struct {
 	listLandmarks  func(context.Context, int64) ([]model.Landmark, error)
 	listFoods      func(context.Context, int64) ([]model.Food, error)
 	listCharacters func(context.Context, int64) ([]model.Character, error)
+	listAllCounts  func(context.Context) (map[int64]model.CityCounts, error)
 }
 
 func (r *fakeCityRepository) ListAll(ctx context.Context) ([]model.City, error) {
@@ -44,10 +45,20 @@ func (r *fakeCityRepository) ListCharacters(ctx context.Context, cityID int64) (
 	return r.listCharacters(ctx, cityID)
 }
 
+func (r *fakeCityRepository) ListAllCounts(ctx context.Context) (map[int64]model.CityCounts, error) {
+	if r.listAllCounts != nil {
+		return r.listAllCounts(ctx)
+	}
+	return map[int64]model.CityCounts{}, nil
+}
+
 func TestCityServiceList(t *testing.T) {
 	repo := detailCityRepository()
 	repo.listAll = func(context.Context) ([]model.City, error) {
 		return []model.City{{ID: 1, Name: "北京", Province: "北京", Lat: 39.9042, Lng: 116.4074}}, nil
+	}
+	repo.listAllCounts = func(context.Context) (map[int64]model.CityCounts, error) {
+		return map[int64]model.CityCounts{1: {LandmarkCount: 2, FoodCount: 2, CharacterCount: 1}}, nil
 	}
 
 	cities, err := NewCityService(repo).List(context.Background())
@@ -56,6 +67,9 @@ func TestCityServiceList(t *testing.T) {
 	}
 	if len(cities) != 1 || cities[0].Name != "北京" || len(cities[0].Tags) != 1 || cities[0].Tags[0] != "ancient_capital" {
 		t.Fatalf("List() = %#v, want city with tags", cities)
+	}
+	if cities[0].LandmarkCount != 2 || cities[0].FoodCount != 2 || cities[0].CharacterCount != 1 {
+		t.Fatalf("List() counts = %d/%d/%d, want 2/2/1", cities[0].LandmarkCount, cities[0].FoodCount, cities[0].CharacterCount)
 	}
 }
 

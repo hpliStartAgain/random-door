@@ -92,6 +92,12 @@
   }
 }
 
+/* 地图落点脉冲 —— foxMarkerContent 和 cityMarkerContent 均引用 */
+@keyframes mapLandPulse {
+  0%   { transform: translateX(-50%) scale(1);    opacity: 0.6; }
+  100% { transform: translateX(-50%) scale(2.4);  opacity: 0; }
+}
+
 @keyframes foxFloat {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-10px); }

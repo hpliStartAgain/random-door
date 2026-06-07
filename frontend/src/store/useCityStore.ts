@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../api';
 import type { CityListItem, CityDetail } from '../api/types';
+import { filterCities } from '../lib/cityFilters';
 
 export type City = CityListItem;
 
@@ -8,7 +9,12 @@ interface CityState {
   cities: City[];
   cityCache: Record<number, CityDetail>;
   searchQuery: string;
+  activeRegion: string | null;
+  activeTag: string | null;
   setSearchQuery: (q: string) => void;
+  setActiveRegion: (r: string | null) => void;
+  setActiveTag: (t: string | null) => void;
+  resetFilters: () => void;
   filteredCities: () => City[];
   loadCities: () => Promise<void>;
   loadCity: (id: number) => Promise<CityDetail>;
@@ -20,15 +26,15 @@ export const useCityStore = create<CityState>((set, get) => ({
   cities: [],
   cityCache: {},
   searchQuery: '',
+  activeRegion: null,
+  activeTag: null,
   setSearchQuery: (q) => set({ searchQuery: q }),
+  setActiveRegion: (r) => set({ activeRegion: r }),
+  setActiveTag: (t) => set({ activeTag: t }),
+  resetFilters: () => set({ searchQuery: '', activeRegion: null, activeTag: null }),
   filteredCities: () => {
-    const { cities, searchQuery } = get();
-    if (!searchQuery) return cities;
-    return cities.filter(c =>
-      c.name.includes(searchQuery) ||
-      c.province.includes(searchQuery) ||
-      c.tags?.some(t => t.includes(searchQuery))
-    );
+    const { cities, searchQuery, activeRegion, activeTag } = get();
+    return filterCities(cities, searchQuery, activeRegion, activeTag);
   },
   loadCities: async () => {
     const res = await api.getCities();

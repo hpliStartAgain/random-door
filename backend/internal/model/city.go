@@ -17,3 +17,10 @@ type City struct {
 }
 
 func (City) TableName() string { return "cities" }
+
+// CityCounts holds aggregated content counts for one city (used by list API).
+type CityCounts struct {
+	LandmarkCount  int
+	FoodCount      int
+	CharacterCount int
+}

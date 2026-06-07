@@ -16,6 +16,7 @@ type CityRepository interface {
 	ListLandmarks(ctx context.Context, cityID int64) ([]model.Landmark, error)
 	ListFoods(ctx context.Context, cityID int64) ([]model.Food, error)
 	ListCharacters(ctx context.Context, cityID int64) ([]model.Character, error)
+	ListAllCounts(ctx context.Context) (map[int64]model.CityCounts, error)
 }
 
 type CityService struct {
@@ -28,13 +29,16 @@ func NewCityService(cityRepo CityRepository) *CityService {
 
 // CityListItem is a lightweight city representation for the list endpoint.
 type CityListItem struct {
-	ID            int64    `json:"id"`
-	Name          string   `json:"name"`
-	Province      string   `json:"province"`
-	Lat           float64  `json:"lat"`
-	Lng           float64  `json:"lng"`
-	CoverImageURL *string  `json:"cover_image_url,omitempty"`
-	Tags          []string `json:"tags"`
+	ID             int64    `json:"id"`
+	Name           string   `json:"name"`
+	Province       string   `json:"province"`
+	Lat            float64  `json:"lat"`
+	Lng            float64  `json:"lng"`
+	CoverImageURL  *string  `json:"cover_image_url,omitempty"`
+	Tags           []string `json:"tags"`
+	LandmarkCount  int      `json:"landmark_count"`
+	FoodCount      int      `json:"food_count"`
+	CharacterCount int      `json:"character_count"`
 }
 
 // CityDetail is the full city response with related entities.
@@ -74,12 +78,20 @@ type CharacterItem struct {
 	CharacterType string  `json:"character_type"`
 	AvatarURL     *string `json:"avatar_url,omitempty"`
 	DialectStyle  *string `json:"dialect_style,omitempty"`
+	RoleTitle     *string `json:"role_title,omitempty"`
+	LifeSpan      *string `json:"life_span,omitempty"`
+	IntroQuote    *string `json:"intro_quote,omitempty"`
 }
 
 func (s *CityService) List(ctx context.Context) ([]CityListItem, error) {
 	cities, err := s.cityRepo.ListAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list cities: %w", err)
+	}
+
+	counts, err := s.cityRepo.ListAllCounts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list city counts: %w", err)
 	}
 
 	result := make([]CityListItem, 0, len(cities))
@@ -92,14 +104,18 @@ func (s *CityService) List(ctx context.Context) ([]CityListItem, error) {
 		for _, t := range tags {
 			tagNames = append(tagNames, t.Tag)
 		}
+		cnt := counts[c.ID]
 		result = append(result, CityListItem{
-			ID:            c.ID,
-			Name:          c.Name,
-			Province:      c.Province,
-			Lat:           c.Lat,
-			Lng:           c.Lng,
-			CoverImageURL: c.CoverImageURL,
-			Tags:          tagNames,
+			ID:             c.ID,
+			Name:           c.Name,
+			Province:       c.Province,
+			Lat:            c.Lat,
+			Lng:            c.Lng,
+			CoverImageURL:  c.CoverImageURL,
+			Tags:           tagNames,
+			LandmarkCount:  cnt.LandmarkCount,
+			FoodCount:      cnt.FoodCount,
+			CharacterCount: cnt.CharacterCount,
 		})
 	}
 	return result, nil
@@ -159,6 +175,7 @@ func (s *CityService) Detail(ctx context.Context, cityID int64) (*CityDetail, er
 		cs = append(cs, CharacterItem{
 			ID: ch.ID, Name: ch.Name, CharacterType: ch.CharacterType,
 			AvatarURL: ch.AvatarURL, DialectStyle: ch.DialectStyle,
+			RoleTitle: ch.RoleTitle, LifeSpan: ch.LifeSpan, IntroQuote: ch.IntroQuote,
 		})
 	}
 

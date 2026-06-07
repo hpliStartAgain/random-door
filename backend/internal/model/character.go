@@ -10,6 +10,9 @@ type Character struct {
 	AvatarURL     *string   `gorm:"column:avatar_url;type:varchar(512)" json:"avatar_url,omitempty"`
 	Persona       string    `gorm:"column:persona;type:text;not null" json:"-"`
 	DialectStyle  *string   `gorm:"column:dialect_style;type:text" json:"dialect_style,omitempty"`
+	RoleTitle     *string   `gorm:"column:role_title;type:varchar(128)" json:"role_title,omitempty"`
+	LifeSpan      *string   `gorm:"column:life_span;type:varchar(64)" json:"life_span,omitempty"`
+	IntroQuote    *string   `gorm:"column:intro_quote;type:varchar(255)" json:"intro_quote,omitempty"`
 	Prompt        string    `gorm:"column:prompt;type:text;not null" json:"-"`
 	CreatedAt     time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
 }
