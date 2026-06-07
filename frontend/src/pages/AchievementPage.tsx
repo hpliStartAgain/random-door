@@ -38,7 +38,7 @@ export const AchievementPage: React.FC = () => {
       </div>
 
       <div className="glass-panel p-8 rounded-3xl grid grid-cols-2 md:grid-cols-4 gap-6">
-        {data?.unlocked.map((ach) => (
+        {(data?.unlocked ?? []).map((ach) => (
           <div key={ach.code} className="flex flex-col items-center space-y-2 text-center">
             <div className="w-20 h-20 bg-primary/20 rounded-full border-4 border-primary flex items-center justify-center text-4xl shadow-md">
               🏅
@@ -48,17 +48,22 @@ export const AchievementPage: React.FC = () => {
             <span className="text-[10px] text-muted-foreground">{new Date(ach.unlocked_at).toLocaleDateString()}</span>
           </div>
         ))}
-        {data?.progress.map((prog) => (
-          <div key={prog.code} className="flex flex-col items-center space-y-2 text-center opacity-70">
-            <div className="w-20 h-20 bg-muted rounded-full border-4 border-border flex items-center justify-center text-3xl shadow-inner relative overflow-hidden">
-              <div className="absolute bottom-0 left-0 right-0 bg-primary/20" style={{ height: `${(prog.current / prog.target) * 100}%` }}></div>
-              <span className="relative z-10">⏳</span>
+        {(data?.progress ?? []).map((prog) => {
+          const clamped = Math.min(prog.current, prog.target);
+          const pct = Math.min(clamped / prog.target, 1) * 100;
+          const done = clamped >= prog.target;
+          return (
+            <div key={prog.code} className="flex flex-col items-center space-y-2 text-center opacity-70">
+              <div className="w-20 h-20 bg-muted rounded-full border-4 border-border flex items-center justify-center text-3xl shadow-inner relative overflow-hidden">
+                <div className="absolute bottom-0 left-0 right-0 bg-primary/20" style={{ height: `${pct}%` }}></div>
+                <span className="relative z-10">⏳</span>
+              </div>
+              <span className="font-bold text-sm">{prog.code}</span>
+              <span className="text-xs text-muted-foreground">{done ? '已完成' : `${clamped} / ${prog.target}`}</span>
             </div>
-            <span className="font-bold text-sm">{prog.code}</span>
-            <span className="text-xs text-muted-foreground">{prog.current} / {prog.target}</span>
-          </div>
-        ))}
-        {data?.locked.map((ach) => (
+          );
+        })}
+        {(data?.locked ?? []).map((ach) => (
           <div key={ach.code} className="flex flex-col items-center space-y-2 text-center opacity-40 grayscale">
             <div className="w-20 h-20 bg-muted rounded-full border-4 border-border flex items-center justify-center text-3xl">
               🔒
@@ -67,6 +72,11 @@ export const AchievementPage: React.FC = () => {
             <span className="text-[10px] text-muted-foreground line-clamp-2">{ach.description}</span>
           </div>
         ))}
+        {data && (data.unlocked ?? []).length === 0 && (data.progress ?? []).length === 0 && (data.locked ?? []).length === 0 && (
+          <div className="col-span-2 md:col-span-4 text-center text-muted-foreground py-10 text-sm">
+            还没有任何成就，快去探索城市吧！
+          </div>
+        )}
       </div>
     </div>
   );

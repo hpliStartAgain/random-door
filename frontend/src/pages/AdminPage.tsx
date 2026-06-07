@@ -184,6 +184,7 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
   const { push: pushToast } = useToastStore();
   const [token, setToken] = useState('');
   const [authed, setAuthed] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [cityDetails, setCityDetails] = useState<Record<number, CityDetail>>({});
   const [cityDrafts, setCityDrafts] = useState<Record<number, { intro: string; tags: string; dialect_sample: string; dialect_explanation: string }>>({});
   const [coverage, setCoverage] = useState<AdminCoverageResponse | null>(null);
@@ -198,9 +199,18 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
 
   useEffect(() => { loadCities(); }, [loadCities]);
 
-  const handleAuth = () => {
-    if (!token.trim()) return;
-    setAuthed(true);
+  const handleAuth = async () => {
+    if (!token.trim() || authLoading) return;
+    setAuthLoading(true);
+    try {
+      const cov = await api.adminCoverage(token);
+      setCoverage(cov);
+      setAuthed(true);
+    } catch {
+      pushToast('Token 无效，请检查 ADMIN_TOKEN', 'error');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const refreshCoverage = async () => {
@@ -209,10 +219,6 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
       setCoverage(await api.adminCoverage(token));
     } catch { pushToast('覆盖率加载失败，请检查 ADMIN_TOKEN', 'error'); }
   };
-
-  useEffect(() => {
-    if (authed) refreshCoverage();
-  }, [authed]);
 
   const loadCityDetail = async (cityId: number) => {
     if (cityDetails[cityId]) return;
@@ -384,7 +390,7 @@ export const AdminPage: React.FC<Props> = ({ onClose }) => {
           />
           <div className="flex gap-3">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-secondary transition-colors">取消</button>
-            <button onClick={handleAuth} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold transition-colors">进入</button>
+            <button onClick={handleAuth} disabled={authLoading} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold transition-colors disabled:opacity-60">{authLoading ? '验证中…' : '进入'}</button>
           </div>
         </div>
       </div>

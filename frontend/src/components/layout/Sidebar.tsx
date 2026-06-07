@@ -24,9 +24,8 @@ export const Sidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'explore' | 'dice'>('explore');
   const [selectedCity, setSelectedCity] = useState<any | null>(null);
   const [selectedVisitId, setSelectedVisitId] = useState<number | undefined>(undefined);
-  const [searchQuery, setSearchQuery] = useState('');
   
-  const { cities, cityCache, loadCities, loadCity } = useCityStore();
+  const { cities, cityCache, loadCities, loadCity, searchQuery, setSearchQuery, filteredCities } = useCityStore();
   const { lastRoll } = useGameStore();
   const { flyTo } = useMapStore();
   const { userId, setCurrentCityId } = useUserStore();
@@ -86,13 +85,7 @@ export const Sidebar: React.FC = () => {
     }
   };
 
-  const filteredCities = searchQuery
-    ? cities.filter(c =>
-        c.name.includes(searchQuery) ||
-        c.province.includes(searchQuery) ||
-        c.tags?.some(t => t.includes(searchQuery))
-      )
-    : cities;
+  const displayCities = filteredCities();
 
   return (
     <aside className="w-[380px] h-full sidebar-container flex flex-col z-20 overflow-hidden relative border-r border-border/50 shadow-sm shrink-0 bg-background">
@@ -106,7 +99,7 @@ export const Sidebar: React.FC = () => {
         </h2>
         <p className="text-sm text-muted-foreground">
           {activeTab === 'explore'
-            ? `${cities.length || 0} 处名胜 · 穿越历史的长河`
+            ? `${cities.length || 0} 座城市 · 穿越历史的长河`
             : '让狐狸为你开启任意门，寻找下一座城市'}
         </p>
       </div>
@@ -134,6 +127,7 @@ export const Sidebar: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="搜索城市"
             placeholder="搜索城市、省份、标签..."
             className="w-full px-4 py-2 bg-card border border-border/60 rounded-xl text-sm outline-none focus:border-primary/50 transition-colors"
           />
@@ -143,7 +137,7 @@ export const Sidebar: React.FC = () => {
       {/* 滚动内容区 */}
       <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-4">
         {activeTab === 'explore' ? (
-          filteredCities.length > 0 ? filteredCities.map((city) => (
+          displayCities.length > 0 ? displayCities.map((city) => (
             <div
               key={city.id}
               onClick={() => handleCityClick(city)}
@@ -175,8 +169,17 @@ export const Sidebar: React.FC = () => {
               </div>
             </div>
           )) : (
-            <div className="text-center text-muted-foreground py-10">
-              {searchQuery ? `未找到"${searchQuery}"相关城市` : '正在加载地标档案...'}
+            <div className="text-center text-muted-foreground py-10 space-y-3">
+              <p className="text-sm">{searchQuery ? `未找到"${searchQuery}"相关城市` : '正在加载地标档案...'}</p>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-xs text-primary underline underline-offset-2"
+                >
+                  清空搜索
+                </button>
+              )}
             </div>
           )
         ) : (

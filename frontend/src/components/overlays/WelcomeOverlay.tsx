@@ -1,11 +1,13 @@
 import React from 'react';
 import { Dices, MapPinned } from 'lucide-react';
 import { useViewStore } from '../../store/useViewStore';
+import { useCityStore } from '../../store/useCityStore';
 
 const CITIES = ['北京', '上海', '西安', '成都', '杭州', '苏州', '南京', '武汉', '重庆', '广州', '厦门', '洛阳'];
 
 export const WelcomeOverlay: React.FC = () => {
   const { enter, setView } = useViewStore();
+  const cityCount = useCityStore(s => s.cities.length);
 
   const handleEnter = (mode: 'FREE_EXPLORE' | 'GAME_DICE') => {
     enter();
@@ -126,7 +128,7 @@ export const WelcomeOverlay: React.FC = () => {
 
           {/* Feature tags */}
           <div className="wfu-4 flex flex-wrap gap-2 mt-8 justify-center">
-            {['35座城市', 'AI人物对话', '赛博打卡', '成就收集', '3D地图探索'].map((tag) => (
+            {[`${cityCount > 0 ? `${cityCount}座` : '多'}城市`, 'AI人物对话', '赛博打卡', '成就收集', '3D地图探索'].map((tag) => (
               <span
                 key={tag}
                 className="text-xs px-3 py-1 rounded-full bg-card/80 text-muted-foreground border border-border/70 shadow-sm"

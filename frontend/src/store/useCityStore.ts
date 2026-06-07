@@ -7,6 +7,9 @@ export type City = CityListItem;
 interface CityState {
   cities: City[];
   cityCache: Record<number, CityDetail>;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  filteredCities: () => City[];
   loadCities: () => Promise<void>;
   loadCity: (id: number) => Promise<CityDetail>;
   reloadCity: (id: number) => Promise<CityDetail>;
@@ -16,6 +19,17 @@ interface CityState {
 export const useCityStore = create<CityState>((set, get) => ({
   cities: [],
   cityCache: {},
+  searchQuery: '',
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  filteredCities: () => {
+    const { cities, searchQuery } = get();
+    if (!searchQuery) return cities;
+    return cities.filter(c =>
+      c.name.includes(searchQuery) ||
+      c.province.includes(searchQuery) ||
+      c.tags?.some(t => t.includes(searchQuery))
+    );
+  },
   loadCities: async () => {
     const res = await api.getCities();
     set({ cities: res.cities });

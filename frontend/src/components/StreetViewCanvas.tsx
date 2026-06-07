@@ -1,5 +1,4 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Pannellum } from 'pannellum-react';
 import { Camera, Copy, Sparkles, X } from 'lucide-react';
 import { useViewStore } from '../store/useViewStore';
 import { useUserStore } from '../store/useUserStore';
@@ -124,18 +123,10 @@ export const StreetViewCanvas: React.FC = () => {
     <div ref={rootRef} className="absolute inset-0 z-0 bg-black flex flex-col overflow-hidden">
       
       <div className="absolute inset-0 z-0 opacity-90">
-        <Pannellum
-          width="100%"
-          height="100%"
-          image={panoramaUrl}
-          pitch={10}
-          yaw={180}
-          hfov={110}
-          autoLoad
-          crossOrigin="anonymous"
-          showZoomCtrl={false}
-          showFullscreenCtrl={false}
-          mouseZoom={false}
+        <img
+          src={panoramaUrl}
+          alt={targetName}
+          className="w-full h-full object-cover"
         />
       </div>
       
@@ -148,7 +139,7 @@ export const StreetViewCanvas: React.FC = () => {
           onClick={() => setCanvasMode('map')}
           className="px-6 py-2 bg-black/40 hover:bg-black/60 backdrop-blur-lg text-white font-bold rounded-full border border-white/20 shadow-2xl flex items-center gap-2 transition-all hover:scale-105"
         >
-          <span>&larr;</span> 退出 3D 全景
+          <span>&larr;</span> 退出风光浏览
         </button>
       </div>
 

@@ -25,7 +25,7 @@ function foxMarkerContent(label?: string, pulse = false): HTMLDivElement {
 
 export const MapCanvas: React.FC = () => {
   const { setMapContext, flyTo } = useMapStore();
-  const { cities } = useCityStore();
+  const { filteredCities, searchQuery } = useCityStore();
   const { lastRoll, fromPoint } = useGameStore();
   const { rollPhase } = useViewStore();
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -96,12 +96,13 @@ export const MapCanvas: React.FC = () => {
 
   useEffect(() => {
     const { mapInstance, AMap } = useMapStore.getState();
-    if (!mapInstance || !AMap || cities.length === 0) return;
+    if (!mapInstance || !AMap) return;
 
     baseLayersRef.current.forEach((layer) => { try { mapInstance.remove(layer); } catch {} });
     baseLayersRef.current = [];
 
-    cities.forEach(city => {
+    const citiesToShow = filteredCities();
+    citiesToShow.forEach(city => {
       const markerContent = `
         <div class="px-3 py-1 bg-[#F5F3EB]/90 backdrop-blur border border-[#E5E0D5] text-[#2B3A36] rounded-full text-xs font-bold shadow-md cursor-pointer hover:bg-white transition-colors flex items-center gap-1">
           <span class="w-2 h-2 rounded-full bg-[#C29F60]"></span>
@@ -131,7 +132,7 @@ export const MapCanvas: React.FC = () => {
     });
     mapInstance.add(userMarker);
     baseLayersRef.current.push(userMarker);
-  }, [map, cities, flyTo, userPosition]);
+  }, [map, searchQuery, filteredCities, flyTo, userPosition]);
 
   useEffect(() => {
     const { mapInstance, AMap } = useMapStore.getState();

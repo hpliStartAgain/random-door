@@ -126,7 +126,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                       }}
                       className="mt-2 text-xs px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/15 hover:bg-primary/15 transition-colors"
                     >
-                      全景
+                      查看图片
                     </button>
                   </div>
                 </div>
@@ -141,10 +141,12 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
             <div className="panel-header"><span>👤</span> 历史人物</div>
             <div className="panel-body space-y-3">
               {city.characters.map(char => (
-                <div
+                <button
                   key={char.id}
+                  type="button"
                   onClick={() => openDrawer('chat', char)}
-                  className="flex items-center gap-3 rounded-xl border border-border/60 p-3 hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group"
+                  className="w-full flex items-center gap-3 rounded-xl border border-border/60 p-3 hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group text-left"
+                  aria-label={`与${char.name}对话`}
                 >
                   <div className="w-12 h-12 rounded-full shrink-0 bg-gradient-to-br from-primary/20 to-accent/30 flex items-center justify-center overflow-hidden">
                     {char.avatar_url ? (
@@ -161,7 +163,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                     <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{char.dialect_style}</p>
                   </div>
                   <span className="text-muted-foreground group-hover:text-primary transition-colors text-sm">&rarr;</span>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -173,10 +175,12 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
             <div className="panel-header"><span>🍜</span> 风味人间</div>
             <div className="panel-body grid grid-cols-2 gap-3">
               {city.foods.map(food => (
-                <div
+                <button
                   key={food.id}
+                  type="button"
                   onClick={() => openDrawer('gallery', { ...food, target_type: 'food' })}
-                  className="rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all cursor-pointer"
+                  className="rounded-xl border border-border/60 overflow-hidden hover:border-accent/50 hover:shadow-sm transition-all cursor-pointer text-left"
+                  aria-label={`查看${food.name}详情`}
                 >
                   {food.image_url ? (
                     <img src={mediaUrl(food.image_url)} alt={food.name} className="w-full h-20 object-cover" />
@@ -187,7 +191,7 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
                     <h4 className="font-semibold text-sm mb-0.5">{food.name}</h4>
                     <p className="text-xs text-muted-foreground line-clamp-2">{food.description}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
@@ -197,13 +201,15 @@ export const CityDetailPanel: React.FC<Props> = ({ city, visitId, onBack }) => {
         <section className="panel">
           <div className="panel-header"><span>✨</span> 沉浸体验</div>
           <div className="panel-body space-y-3">
-            <div
+            <button
+              type="button"
               onClick={() => setCanvasMode('street', city)}
               className="w-full h-28 rounded-xl bg-gradient-to-br from-primary/10 to-accent/15 border border-primary/20 flex flex-col items-center justify-center cursor-pointer hover:scale-[1.01] hover:shadow-sm transition-all group"
+              aria-label={`查看${city.name}城市风光图`}
             >
-              <span className="text-3xl mb-1.5 group-hover:scale-110 transition-transform">🛣️</span>
-              <span className="text-sm font-semibold text-primary">进入 3D 街景</span>
-            </div>
+              <span className="text-3xl mb-1.5 group-hover:scale-110 transition-transform">�️</span>
+              <span className="text-sm font-semibold text-primary">查看城市风光</span>
+            </button>
 
             <button
               onClick={() => setShowCheckin(true)}

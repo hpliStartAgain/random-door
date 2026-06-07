@@ -90,9 +90,9 @@ func (s *AchievementService) Wall(ctx context.Context, userID int64) (*WallResul
 		return nil, fmt.Errorf("build progress stats: %w", err)
 	}
 
-	var unlocked []UnlockedAchievement
-	var locked []LockedAchievement
-	var progress []ProgressItem
+	unlocked := make([]UnlockedAchievement, 0)
+	locked := make([]LockedAchievement, 0)
+	progress := make([]ProgressItem, 0)
 
 	for _, ach := range allAchs {
 		if ua, ok := unlockedMap[ach.ID]; ok {
