@@ -1,6 +1,6 @@
 # API 契约（api-contract.md）
 
-> 前后端唯一真相源。对应概要设计 16 章。任何接口改动**必须先改本文件**。
+> 前后端唯一真相源。任何接口改动**必须先改本文件**。
 > 通用约定见下方「0. 全局约定」。
 
 ## 0. 全局约定
@@ -37,6 +37,8 @@
 | 409 | CONFLICT | 账号名、成就 code 等唯一资源冲突 |
 | 502 | AI_UPSTREAM_ERROR | 外部 LLM / 生图 API 失败 |
 | 504 | AI_TIMEOUT | 外部 AI 调用超时 |
+| 503 | ADMIN_DISABLED | 后台未配置 ADMIN_TOKEN |
+| 401 | UNAUTHORIZED | 后台 token 缺失或无效 |
 | 500 | INTERNAL_ERROR | 服务器内部错误 |
 
 ### 0.5 字段类型约定
@@ -111,7 +113,7 @@
 
 ## 2. GET /api/cities — 城市列表
 
-**请求**：无参数（演示版全量 35 城，seed 校验允许 12~100 城）。
+**请求**：无参数。当前 seed 提供 35 城；运行时返回数据库中的城市集合。
 
 **响应 200**
 ```json
@@ -566,7 +568,7 @@ lat/lng 可选；缺省时用默认位置（北京）。
 
 ---
 
-## 10.1 GET /api/users/{user_id}/assets — 匿名用户资产页
+## 10.1 GET /api/users/{user_id}/assets — 用户资产页
 
 **路径参数**：user_id。
 
@@ -594,7 +596,7 @@ lat/lng 可选；缺省时用默认位置（北京）。
 
 ---
 
-## 10.2 匿名用户 Profile
+## 10.2 用户 Profile
 
 ### GET /api/users/{user_id}/profile
 

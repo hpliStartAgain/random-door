@@ -1,100 +1,95 @@
-# 任意门 · AI 城市漫游（Random Door）v1.0
+# 任意门
 
-> **推开门，遇见大美中国。**
-> 一个城市文化互动探索 Web 应用：自由探索 + 大富翁式随机漫游 + AI 跨时空人物对话 + AI 赛博打卡海报 + 成就收集。
+> 推开门，遇见大美中国。
 
-## 架构概览
-```
-浏览器 (React + 高德地图 3D + Pannellum 360全景)
-        │ HTTP
-        ▼
-   Go 后端 (Gin + GORM)
+任意门是一个城市文化互动探索 Web 产品：用户可以在中国城市地图上自由探索，也可以通过随机方向与随机距离开启一次“大富翁式”城市漫游。到达城市后，产品提供城市内容、地标风光、人物 AI 对话、赛博打卡海报、猜城市挑战、足迹资产和成就收集。
 
-   ├─ 业务 / 随机算法 / AI 编排 / 成就判定
-        │                 │
-        ▼                 ▼
-     MySQL          外部 AI API (LLM / 生图)
-```
-**前端技术栈亮点**：采用 Zustand 进行无缝的跨组件事件流转；宏观视角使用高德 3D API 进行赛博飞越；微观探索利用 WebGL (Pannellum) 渲染高清无损的等距圆柱全景摄影图。
-详见 `docs/arch/system-architecture.md`。
+## 当前形态
+
+- 前端：React + Vite + TypeScript + Tailwind CSS + Zustand + 高德地图 JS API。
+- 后端：Go + Gin + GORM 单体服务，分层为 `api -> service -> repository`。
+- 数据库：外部 MySQL 8 / MariaDB。服务启动自动建表，内容库以数据库为事实源。
+- AI：外部 LLM 与外部图像生成 API，全部由后端调用；前端只持有高德公开 Key。
+- 部署：Docker Compose 单机部署，`app` 提供 API，`caddy` 托管前端并反代 `/api`。
 
 ## 快速开始
+
 ```bash
-# 1. 克隆
 git clone <repo> && cd random-door
-
-# 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env：至少修改外部 MySQL 的 DB_*，并填入高德 Key
-# LLM_API_KEY / IMAGE_API_KEY 可先留空或 mock，演示真实 AI 时再填
-
-# 3. 一键启动
-docker compose up -d        # 或 make up
-
-# 4. 内容数据
-# 后端启动会自动建表，但默认不写 seed；数据库是后台内容的事实源。
-# 如需给空库补齐演示 seed，先只读盘点，再显式 bootstrap：
-make seed-audit
-make seed
-
-# 5. 访问
-# 前端: http://localhost           （或 Caddy 暴露端口）
-# 后端: http://localhost:8080/api
+# 编辑 .env：配置 DB_*、VITE_AMAP_KEY、ADMIN_TOKEN；真实 AI 能力需配置 LLM_* / IMAGE_*。
+docker compose up -d
 ```
 
-## 常用命令（Makefile）
+访问地址：
+
+- 前端：`http://localhost`
+- 后端健康检查：`http://localhost:8080/health`
+- API 前缀：`http://localhost:8080/api`
+
+## 内容初始化
+
+应用启动会执行 GORM AutoMigrate，但默认 `SEED_MODE=off`，不会覆盖数据库内容。空库初始化或维护回填请显式执行：
+
+```bash
+make seed-audit
+make seed
+```
+
+`make seed` 只补齐缺失行；`make seed-sync` 会按 seed 覆盖自然键匹配行，执行前必须先确认差异。
+
+当前仓库 seed 提供 35 座精选城市、每城 1-2 个地标、1-2 个美食、1 个人物，以及 11 个成就。线上内容扩展应优先走后台 CMS。
+
+## 常用命令
+
 | 命令 | 作用 |
 |---|---|
-| `make up` / `make down` | 启停所有容器 |
+| `make up` / `make down` | 启停容器 |
 | `make build` | 构建镜像 |
-| `make migrate` | (已废弃，启动时自动建表) |
-| `make seed-audit` | 只读盘点真实库与 seed 的差异 |
-| `make seed` | 显式补齐缺失 seed 行，不覆盖后台已有内容 |
-| `make seed-sync` | 谨慎：按 seed 覆盖自然键匹配行 |
-| `make seed-landmark-coords` | 仅回填缺失的地标经纬度 |
+| `make seed-audit` | 只读盘点数据库与 seed 差异 |
+| `make seed` | 只插入缺失 seed 内容 |
+| `make seed-sync` | 谨慎覆盖自然键匹配内容 |
+| `make seed-landmark-coords` | 回填缺失地标经纬度 |
 | `make logs` | 查看后端日志 |
-| `make lint` / `make test` | 检查 / 测试 |
+| `make lint` | 后端 gofmt/vet + 前端 lint |
+| `make test` | 后端单元测试 |
+| `make fe-dev` / `make fe-build` | 前端开发 / 构建 |
 
 ## AI 联调
-
-真实 Key 填入 `.env` 后，可先跑不泄露密钥的端点自检：
 
 ```bash
 python scripts/ai_smoke.py --llm
 python scripts/ai_smoke.py --image --selfie path/to/selfie.jpg --confirm-image-cost
 ```
 
-脚本只输出是否配置、HTTP 状态和结果摘要，不打印 `LLM_API_KEY` / `IMAGE_API_KEY`。
-
-## 目录说明
-| 目录 | 内容 |
-|---|---|
-| `backend/` | Go 后端：cmd/server 入口，internal/ 分层，data/seed 种子，migrations DDL |
-| `frontend/` | React 前端：src/pages|components|api|store |
-| `docs/design/` | 详细设计（agent 写代码依据） |
-| `docs/agent/` | coding agent 约束规则 |
-| `docs/arch/` | 架构文档 |
-| `docs/product/` | 产品文档 |
-
-## 文档索引
-- 入门：`CLAUDE.md`（agent 总约束）
-- 设计：`docs/design/00-detailed-design-index.md`
-- 架构：`docs/arch/system-architecture.md`、`directory-structure.md`
-- 产品：`docs/product/prd.md`、`user-flows.md`
-- 验收：`docs/product/acceptance-criteria.md`
+脚本只输出配置状态、HTTP 状态和结果摘要，不打印 `LLM_API_KEY` / `IMAGE_API_KEY`。
 
 ## 后台管理
 
-Navbar 右上角齿轮图标 → 输入 `ADMIN_TOKEN`（`.env` 中配置）→ 进入媒体资产管理界面。
+Navbar 右上角齿轮图标进入后台管理。后台由 `ADMIN_TOKEN` 保护，支持：
 
-功能：为每个城市的**封面图 / 地标图 / 人物头像 / 美食图**批量上传文件或粘贴外链 URL。
+- 城市、标签、地标、美食、人物内容维护。
+- 城市封面、地标图、美食图、人物头像、成就勋章上传。
+- 远程图片 URL 导入到本地 `/uploads/admin_imports/...` 后绑定。
+- 成就规则与勋章维护。
 
-## 黄金动线（<10 分钟演示）
+## 文档索引
 
-见 `docs/product/demo-script.md`：开场品牌页 → 掷骰仪式 → 城市探索 → AI 跨时空对话 → 赛博打卡 → 成就解锁。
+- Agent 总约束：`AGENTS.md`、`CLAUDE.md`
+- API 契约：`docs/design/api-contract.md`
+- 数据库设计：`docs/design/database-detailed-design.md`
+- 后端详设：`docs/design/backend-detailed-design.md`
+- 前端详设：`docs/design/frontend-detailed-design.md`
+- 产品总纲：`docs/product/prd.md`
+- 用户流程：`docs/product/user-flows.md`
+- 验收标准：`docs/product/acceptance-criteria.md`
+- 待办事项：`TODO.md`
+- 版本记录：`CHANGELOG.md`
 
-每 ~90s 一个 WOW，适合评委演示。
+## 关键约束
 
-## MVP 范围与约束
-- 35 个精选演示城市；匿名用户（无注册登录）；不引入 Redis/MQ；AI 走外部 API；2C2G 单机部署。
-- 验收标准见 `docs/product/acceptance-criteria.md`（20 条）。
+- 不引入 Redis / Kafka / Elasticsearch / 向量库 / 微服务网关。
+- AI API Key 只存在于后端环境变量；前端不得直连 LLM 或图像生成 API。
+- 接口变更必须先改 `docs/design/api-contract.md`。
+- 表结构变更必须同步 `docs/design/database-detailed-design.md` 与 `backend/migrations/schema.sql`。
+- 运行时上传与生成文件不入库，不提交 `.env` 或任何密钥。

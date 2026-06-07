@@ -1,69 +1,82 @@
-# 总体系统架构（system-architecture.md）
-
-> 对应概要设计 10 章。供 coding agent 理解全局后再进入各详设文档。
+# 总体系统架构
 
 ## 1. 架构总览
-系统采用**前后端分离 + 单体后端**架构。前端纯静态资源，后端单一 Go 进程，数据落 MySQL，AI 走外部 API，文件存本地磁盘。
+
+任意门采用前后端分离 + Go 单体后端架构。前端构建为静态资源，由 Caddy 托管并反向代理 `/api`；后端是单一 Gin 进程，使用 GORM 连接外部 MySQL，AI 能力通过外部 API 调用，上传和生成文件落本地卷。
 
 ```text
-┌────────────────────────────────────────────────┐
-│                  用户浏览器                      │
-│  React + Vite + TypeScript + 高德地图 JS API     │
-└──────────────────────┬─────────────────────────┘
-                       │ HTTP / HTTPS
-                       ▼
-┌────────────────────────────────────────────────┐
-│           (可选) Caddy — 静态托管 + API 反代       │
-│   MVP 也可由 Go 直接托管 /static、/uploads        │
-└──────────────────────┬─────────────────────────┘
-                       │
-                       ▼
-┌────────────────────────────────────────────────┐
-│                  Go 后端服务                     │
-│  Gin / GORM / 随机算法 / AI 编排 / 成就判定        │
-│  分层：api → service → repository                │
-└───────────────┬─────────────────┬──────────────┘
-                │                 │
-                ▼                 ▼
-┌──────────────────────┐   ┌────────────────────┐
-│        MySQL          │   │   外部 AI API        │
-│ 用户/城市/访问/掷骰    │   │ LLM 对话 / 图像生成   │
-│ 打卡/对话/成就        │   │                    │
-└──────────────────────┘   └────────────────────┘
-                │
-                ▼
-┌────────────────────────────────────────────────┐
-│                 本地文件存储                     │
-│ uploads/selfies  uploads/generated  static/      │
-└────────────────────────────────────────────────┘
+Browser
+  React / Vite / TypeScript / Tailwind / Zustand / AMap
+        |
+        | HTTP
+        v
+Caddy
+  static frontend dist
+  /api -> app:8080
+  /static and /uploads file serving
+        |
+        v
+Go app
+  Gin router
+  api -> service -> repository
+  geo / ai / upload / achievement / seed
+        |                      |
+        v                      v
+External MySQL           External AI APIs
+  users/cities/...         LLM / image generation
+        |
+        v
+Local volumes
+  static assets / uploads
 ```
 
-## 2. 前端职责（9 项）
-1. 模式选择；2. 地图展示（高德）；3. 城市点位展示；4. 掷骰交互；5. 地图移动动画；6. 城市详情展示；7. AI 对话 UI；8. 图片上传与生成结果展示；9. 成就墙展示。
+## 2. 前端职责
 
-## 3. 后端职责（12 项）
-1. 匿名用户管理；2. 城市数据读取；3. 自由探索访问记录；4. 游戏随机算法；5. 掷骰记录；6. 城市访问记录；7. AI 对话 Prompt 编排；8. 外部 LLM 调用；9. 外部生图调用；10. 图片保存；11. 打卡记录；12. 成就判定。
+- 首屏欢迎、自由探索、任意门随机漫游入口。
+- 高德地图加载、城市/地标 marker、飞行动画。
+- 城市列表搜索、区域筛选、标签筛选。
+- 城市详情、风光浏览、声景控制、评论、AI 对话、打卡流程。
+- 成就墙、资产页、个人资料面板、猜城市挑战页。
+- 后台 CMS 界面。
 
-## 4. 数据流向（典型）
+## 3. 后端职责
+
+- 用户匿名身份、注册/登录、资料维护。
+- 城市 catalog 查询与后台维护。
+- 自由访问、随机漫游、地理算法、访问记录。
+- AI 对话 prompt 编排、LLM 调用、消息落库。
+- 异步生图任务、上传校验、生成图保存、用量限制。
+- 打卡、资产聚合、成就评估。
+- 评论、猜城市挑战与答案。
+- seed audit/bootstrap/sync 工具与启动时受控导入。
+
+## 4. 典型数据流
+
 ```text
-自由探索：前端点击城市 → POST /visits/free → 写 city_visits → 进详情
-游戏互动：定位 → POST /game/init → POST /game/roll(算法) → 写 dice_rolls + city_visits → 进详情
-AI 对话：POST /chat → 组装 Prompt → 外部 LLM → 落 chat_messages → 返回 reply
-赛博打卡：POST /checkin/generate-image(生图) → 用户确认 → POST /checkin → 写 checkins → 成就判定
+自由探索：点击城市 -> POST /visits/free -> city_visits -> GET /cities/{id}
+任意门：POST /game/init -> POST /game/roll -> dice_rolls + city_visits -> 地图动画
+对话：POST /chat -> prompt_builder -> LLM -> chat_messages -> reply
+生图：上传自拍 -> ai_tasks queued -> worker 调 image API -> uploads/generated
+打卡：POST /checkin -> checkins -> achievement evaluator -> user_achievements
+猜城市：POST /guess/caption -> POST /guess/challenges -> /?guess=code -> answers
+后台：ADMIN_TOKEN -> /api/admin/* -> catalog / media / achievements
 ```
 
-## 5. 关键架构原则（对应概要 5 章）
-- **双模式共存**：自由探索 + 游戏互动，仅"如何到达城市"不同。
-- **共享城市探索内核**：到达后统一进城市详情，复用对话/打卡/成就。
-- **轻后端重体验**：后端管状态/算法/AI 编排/成就；前端管展示/动画/交互。
-- **AI 外部化**：不本地部署模型，全走外部 API（仅后端调用）。
-- **避免过度工程化**：单体 + MySQL，不引 Redis/MQ/ES/网关/微服务。
+## 5. 架构原则
 
-## 6. 为什么没有 Nginx？
-MVP 阶段前端为纯静态产物，**可选 Caddy**（配置更简、自动 HTTPS）做静态托管与 /api 反代；甚至可由 Go 后端直接 `Static` 托管 static/uploads。不引入 Nginx 以减少组件与排障成本，符合 2C2G 约束。生产化阶段再评估 Nginx/CDN（见 roadmap.md v1.0）。
+- 单体优先：不拆微服务，不引入 Redis / MQ / ES / 网关。
+- 数据库为内容事实源：seed 默认关闭，只用于受控初始化或维护。
+- AI 后端隔离：LLM / IMAGE Key 不下发前端。
+- 前端体验集中：地图、动效、抽屉、覆盖层由 React/Zustand 编排。
+- 资源受控：上传限大小，AI 限每日次数，2C2G 单机可运行。
 
-## 7. 与其它文档的衔接
-- 部署拓扑 → deployment-architecture.md
-- 数据模型 → data-model-er.md
-- 安全合规 → security-compliance.md
-- 完整文件树 → directory-structure.md
+## 6. 为什么使用 Caddy
+
+Caddy 当前负责前端静态托管、`/api` 反代、静态/上传文件暴露和健康检查。项目不引入 Nginx，是为了保持部署组件少、配置简单、资源占用低。
+
+## 7. 文档衔接
+
+- 部署：`deployment-architecture.md`
+- 数据模型：`data-model-er.md`
+- 安全合规：`security-compliance.md`
+- 文件树：`directory-structure.md`

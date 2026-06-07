@@ -1,43 +1,71 @@
 # Changelog
 
-## [1.0.0] - 2026-06-06
-
-### Added
-- **WelcomeOverlay**：全屏品牌开场页，双入口（自由探索 / 随机漫游）+ 微动效
-- **DiceConsole**：3D 骰子滚动动画 + 罗盘方向 + 距离展示 + 揭晓仪式（Phase 1 wow①）
-- **MapCanvas**：掷骰后飞行轨迹折线 + 电影级 flyTo + 降落标记动效
-- **Sidebar**：城市卡片渲染 `cover_image_url` 真实图片，渐变兜底；搜索过滤
-- **RightDrawer**：打字机逐字效果 + 角色专属开场白 + 推荐问题 chips + 头像支持（Phase 2 wow②）
-- **CheckinFlow**：三步打卡向导（选地标→上传自拍→AI生成进度→确认打卡）
-- **CheckinPoster**：Canvas 合成品牌水印海报，一键下载；可传播（Phase 2 wow③）
-- **AchievementUnlock**：全屏成就解锁庆祝，CSS 粒子动画，6s 自动关闭（Phase 2 wow④）
-- **Toast + useToastStore**：全局 Toast 通知系统，替换所有 `alert()`
-- **CityDetailPanel**：集成 CheckinFlow 滑入层 + 方言速记卡 + AchievementUnlock 联动
-- **AdminPage（后台管理）**：Token 门控 + 城市/地标/人物/美食 批量上传文件或粘贴外链 URL
-- **后端 admin API**：`POST /api/admin/*/image`（文件上传）+ `PATCH /api/admin/*/image`（URL绑定），ADMIN_TOKEN 保护
-- **后端加固**：错误码常量化；`service.ErrConflict` / `ErrPermission`；chat 消息长度校验（最大 500 字符）
-- **docker-compose**：app + caddy 双 healthcheck；caddy 等待 app healthy 后启动
-- **docs/product/demo-script.md**：<10 分钟评委演示脚本
+## Unreleased
 
 ### Changed
-- `useViewStore`：新增 `hasEntered`、`enter`、漫游动画状态
-- `useGameStore`：暴露 `fromPoint`、`direction`、`distance_km` 供地图动画消费
-- `.env.example`：新增 `ADMIN_TOKEN` 说明
+
+- 统一项目名称为“任意门”，文档不再以旧验证阶段表述当前状态。
+- 以当前代码为事实标准重写 README、产品文档、架构文档、前后端详设和 agent 约束。
+- 新增 `TODO.md` 项目级待办，替代一次性修复任务记录。
+
+### Removed
+
+- 删除历史对标改造清单、目标任务记录和已入库 Python 缓存文件。
+
+## [1.0.0] - 2026-06-07
+
+### Added
+
+- 后台 CMS 扩展：城市、标签、地标、美食、人物、成就、勋章和媒体资产维护。
+- 用户资产与个人资料：足迹城市、打卡海报、成就进度、匿名资料编辑、注册/登录保留足迹。
+- 猜城市挑战：截图/图片文案、匿名挑战链接、好友答题。
+- 城市发现增强：区域/标签/搜索筛选，地图 marker 与列表同步。
+- 地标坐标与声景：地标 marker、`soundscape_url`、坐标回填命令。
+- 角色元数据：`role_title`、`life_span`、`intro_quote`，前端人物卡片可展示更完整叙事。
+- 狐狸视觉与任意门品牌动效，`RandomCityModal` 替代旧 DiceConsole 命名。
+
+### Changed
+
+- seed 导入改为显式 `SEED_MODE=off|bootstrap|sync`，默认不写库；数据库成为内容事实源。
+- seed 扩展到 35 座精选城市，并将城市标签规范化为中文。
+- seed 重跑时保留后台上传媒体，避免覆盖运营内容。
+- Docker Compose 改为外部 MySQL，Caddy 等待 app healthcheck 后启动。
+- AI 生图改为任务化配置，增加 worker、每日限额和重试参数。
 
 ### Fixed
-- 修复 JSX 中 IIFE 过滤引起的语法错误（Sidebar 搜索逻辑提取为变量）
-- 修复 `CityDetailPanel` 内联打卡逻辑替换为 CheckinFlow 解耦
+
+- 修复成就墙空数据白屏。
+- 修复后台假鉴权，必须校验 `ADMIN_TOKEN` 后进入。
+- 将不可用的全景依赖降级为图片风光浏览，保持打卡/文案链路可用。
+- 修复搜索与地图不同步、成就进度溢出、城市数量文案不一致等体验问题。
+- 修复打卡原子性、错误分类、图片重试逻辑和若干死页面问题。
+
+## [0.2.0] - 2026-06-06
+
+### Added
+
+- 管理端媒体上传接口与 ADMIN_TOKEN 保护。
+- 35 城 seed、静态图片资产、AI worker 配置和容器健康检查。
+- Docker 构建中自动创建 static/uploads 目录。
+
+### Changed
+
+- 从嵌入式 MySQL 切换为外部 MySQL 实例。
+- 使用 `docker-compose` 命令兼容更多部署环境。
+- 移除已提交的 `.env` 敏感文件，更新环境变量模板。
 
 ## [0.1.0] - 2026-05-30
-### Added
-- **Frontend-Backend Integration**: fully connected the React frontend with the Go Gin backend.
-- **Game Engine**: wired up the Dice Roller (`useGameStore.roll`) with backend API (`/api/game/roll`) to perform remote geospatial random rolling.
-- **AI Chat Module**: connected the `RightDrawer` chat UI with the `/api/chat` endpoint.
-- **Cyber Check-in**: added image upload and `api.generateImage` and `api.createCheckin` call to `CityDetailPanel.tsx` for Cyberpunk check-ins.
-- **Achievement Wall**: connected `AchievementPage.tsx` with `/api/users/:id/achievements` and integrated it as an overlay via `Navbar`.
-- **Backend Architecture**: implemented Go + Gin + GORM backend supporting MySQL and dynamic seeding.
-- **Frontend Architecture**: built React + Vite + Zustand + TailwindCSS app with AMap 3D and Pannellum 360 viewer.
 
-### Fixed
-- Fixed TypeScript errors related to mismatched fields between Mock data (`city.figures`) and real API (`city.characters`).
-- Fixed missing arguments in `roll()` calls within `Sidebar.tsx` and `DiceConsole.tsx`.
+### Added
+
+- React + Vite + Zustand + Tailwind 前端基础架构。
+- Go + Gin + GORM 后端基础架构。
+- 匿名用户、城市列表/详情、自由访问、随机漫游、AI 对话、打卡、成就墙主链路。
+- 地理算法：Haversine、8 方向、6 距离档、目标点计算、最近城市匹配。
+- seed 校验与幂等导入。
+- HTTP 兼容 UUID 生成器，支持非安全上下文回退。
+
+### Changed
+
+- 升级 Go 基础镜像到 1.22。
+- 配置 Go / npm 国内镜像与前端依赖安装兼容参数。

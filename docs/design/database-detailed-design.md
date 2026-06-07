@@ -1,6 +1,6 @@
 # 数据库详细设计（database-detailed-design.md）
 
-> 对应概要设计 14、15 章。SQL DDL（schema.sql）以本文件为准。约束见 sql-rules.md。
+> SQL DDL（schema.sql）以本文件为准。约束见 sql-rules.md。
 > 主键统一 `id BIGINT PK AUTO_INCREMENT`；时间 `created_at DATETIME NOT NULL`，可变表加 `updated_at`。
 > 枚举用 VARCHAR + 应用层校验（不用 MySQL ENUM）。
 
@@ -23,7 +23,7 @@ users / cities / city_tags / landmarks / foods / characters / city_visits / dice
 | ai_usage_logs.usage_type | chat, image |
 
 ## 0.2 外键策略
-MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联复杂度），改为：
+当前实现不建物理外键约束（避免 seed 导入顺序问题与删除级联复杂度），改为：
 1. 所有 *_id 字段**建普通索引**；
 2. 一致性由 service 层保证。
 
@@ -240,7 +240,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 | created_at | DATETIME | NOT NULL | |
 
 **索引**：INDEX(target_type, target_id, created_at), INDEX(user_id, created_at)。
-**一致性**：target_id 指向何表由 target_type 决定，service 层校验目标存在；MVP 不建多态物理外键。
+**一致性**：target_id 指向何表由 target_type 决定，service 层校验目标存在；当前不建多态物理外键。
 
 ---
 
@@ -319,7 +319,7 @@ MVP **不建物理外键约束**（避免 seed 导入顺序问题与删除级联
 ## 19. Seed 受控导入
 
 - `backend/internal/seed` 在写库前完整解析并校验 `cities.json` 与 `achievements.json`。
-- 城市数量允许 12~100 个；演示版 seed 固定为 35 个精选城市。每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
+- 城市数量允许 12~100 个；当前仓库 seed 为 35 个精选城市。每城 1~2 地标、1~2 美食、1 人物，且必须含方言、静态资源 URL 和合规人物 Prompt。
 - 地标 seed 必须含 `lat` / `lng` 代表点；运行中前端地图以数据库坐标打点，不在前端临时调用第三方 POI 检索补业务数据。
 - 地标 `soundscape_url` 可为空；非空时必须是 `/static/soundscapes/...` 本地路径，并确保音频文件存在或演示前补齐。
 - 服务启动默认 `SEED_MODE=off`，不写入 seed；数据库是后台 catalog 的事实源。

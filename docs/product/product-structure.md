@@ -1,63 +1,76 @@
-# 产品结构与信息架构（product-structure.md）
+# 产品结构与信息架构
 
-> 对应概要设计 8 章。说明页面层级、双模式关系与统一抽象。
+## 1. 总体结构
 
-## 1. 总体产品结构
 ```text
-首页
-  ↓
-模式选择页
-  ├── 自由探索模式
-  │     ↓ 城市地图 → 点击城市 → 城市详情页
-  └── 游戏互动模式
-        ↓ 获取当前位置 → 掷骰子 → 计算目标城市 → 城市详情页
-
-城市详情页
-  ├── 城市简介
-  ├── 地标景点
-  ├── 特色美食
-  ├── 代表人物
-  ├── 方言样例
-  ├── AI 对话
-  ├── 赛博打卡
-  └── 成就解锁
+任意门 App
+├── 首屏欢迎层
+│   ├── 自由探索
+│   ├── 任意门随机漫游
+│   └── 注册 / 登录
+├── 主工作台
+│   ├── Navbar：品牌、我的足迹、成就墙、后台入口
+│   ├── Sidebar：城市列表、搜索筛选、任意门入口、城市详情面板
+│   ├── MapCanvas：高德地图、城市/地标 marker、飞行动画
+│   ├── StreetViewCanvas：城市/地标风光浏览、声景、猜一猜、打卡入口
+│   └── RightDrawer：人物 AI 对话
+├── 覆盖页
+│   ├── AchievementPage：成就墙
+│   ├── AssetPage：个人资产
+│   ├── AdminPage：后台 CMS
+│   └── GuessChallengePage：好友猜城市挑战
+└── 全局反馈
+    ├── Toast
+    └── AchievementUnlock
 ```
 
-## 2. 页面层级与路由
-| 层级 | 页面 | 路由 |
-|---|---|---|
-| L0 | 首页 HomePage | / |
-| L1 | 模式选择 ModeSelectPage | /mode |
-| L2a | 自由探索 FreeExplorePage | /explore |
-| L2b | 游戏互动 GameModePage | /game |
-| L3 | 城市详情 CityPage（两模式共用） | /city/:id |
-| L4a | 人物对话 ChatPage | /city/:id/chat/:cid |
-| L4b | 赛博打卡 CheckinPage | /city/:id/checkin |
-| L4c | 成就墙 AchievementPage | /achievements |
+## 2. 前端视图状态
 
-## 3. 双模式关系（核心理念）
-自由探索与游戏互动**不是两套独立系统**，而是两种"到达城市"的方式：
+当前前端不是多路由页面栈，而是由 `App.tsx` 组合的单页工作台。主要视图状态来自 `useViewStore`：
+
+| 状态 | 用途 |
+|---|---|
+| `HOME` | 首屏 / 默认视图。 |
+| `CITY_DETAIL` | Sidebar 上方滑入城市详情。 |
+| `GAME_DICE` | 地图区域显示任意门随机城市弹窗。 |
+| `ACHIEVEMENT` | 全屏成就墙覆盖层。 |
+| `ASSETS` | 全屏资产页覆盖层。 |
+| `canvasMode=map/street` | 主画布在地图与风光浏览间切换。 |
+| `profileOpen` | 右侧个人足迹面板。 |
+
+`/?guess=<code>` 是例外入口，会直接渲染 `GuessChallengePage`。
+
+## 3. 到达城市的两种方式
+
 ```text
-自由探索：用户主动选择城市
-游戏互动：系统随机生成目标城市
-       ↓ 二者最终都进入 ↓
-城市详情页 → AI 对话 → 赛博打卡 → 成就系统
+自由探索：搜索 / 筛选 / 地图点击 / 城市卡片点击
+任意门：定位或默认起点 -> 随机方向 -> 随机距离 -> 匹配目标城市
+                         ↓
+                 统一进入城市详情
+                         ↓
+       风光浏览 / AI 对话 / 评论 / 赛博打卡 / 成就
 ```
 
-## 4. 统一抽象：城市访问 Visit
-为复用城市探索内核、降低双模式开发成本，系统抽象「城市访问 Visit」：
-- 记录用户进入某城的行为；
-- 用 visit_mode(free/game) 标识来源；
-- 游戏模式额外关联 from_city_id 与 dice_roll_id。
+## 4. 统一抽象：CityVisit
 
-数据建模见 ../arch/data-model-er.md，表设计见 ../design/database-detailed-design.md。
+`city_visits` 记录用户进入城市的事实，用 `visit_mode` 区分来源：
 
-## 5. 跳转关系图
-```text
-Home →(进入)→ ModeSelect
-ModeSelect →(自由探索)→ FreeExplore →(点城市)→ City
-ModeSelect →(游戏互动)→ GameMode →(掷骰到城)→ City
-City →(选人物)→ Chat
-City →(选景点)→ Checkin
-City/任意 →(查看成就)→ Achievement
-```
+- `free`：自由探索、搜索、地图点击。
+- `game`：任意门随机漫游，关联 `dice_roll_id` 与 `from_city_id`。
+
+成就、资产和用户足迹都基于访问记录与打卡记录聚合。
+
+## 5. 主要数据对象
+
+| 对象 | 用途 |
+|---|---|
+| City | 城市基础信息、坐标、封面、方言。 |
+| CityTag | 城市筛选、成就规则。 |
+| Landmark / Food / Character | 城市详情内容、评论目标、打卡参考。 |
+| DiceRoll | 任意门随机方向、距离、目标点和目标城市。 |
+| Checkin | 打卡与海报资产。 |
+| Achievement / UserAchievement | 成就定义与用户解锁记录。 |
+| AITask / AIUsageLog | 异步生图任务与每日用量限制。 |
+| GuessChallenge / GuessAnswer | 猜城市挑战链接与答案。 |
+
+详细字段见 `../design/database-detailed-design.md`。

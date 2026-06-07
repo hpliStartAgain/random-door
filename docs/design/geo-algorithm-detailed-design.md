@@ -1,11 +1,11 @@
 # 随机漫游算法详细设计（geo-algorithm-detailed-design.md）
 
-> 对应概要设计 17 章。这是 internal/geo 包的实现依据。约束见 go-backend-rules.md。
+> 这是 internal/geo 包的实现依据。约束见 go-backend-rules.md。
 > 包含 4 个文件：distance.go / bearing.go / target_point.go / city_matcher.go。
 > 被 game_service.go 调用，服务于 POST /api/game/init 与 POST /api/game/roll。
 
 ## 0. 算法总览
-游戏互动模式（大富翁式漫游）的核心：从当前位置出发，**随机方向 + 随机距离** → 算出一个目标经纬度 → 在 seed 城市库中匹配**距离目标点最近、且非当前城、优先未访问**的城市。
+任意门随机漫游的核心：从当前位置出发，**随机方向 + 随机距离** → 算出一个目标经纬度 → 在数据库城市集合中匹配**距离目标点最近、且非当前城、优先未访问**的城市。
 
 ```text
 当前位置(lat,lng)
@@ -113,7 +113,7 @@ func MatchNearestCity(cities []City, targetLat, targetLng float64, opt MatchOpti
 5. 否则进入兜底(见 5.3)
 ```
 
-### 5.3 兜底策略（对应概要 17.5）
+### 5.3 兜底策略
 ```text
 全部非当前城市都已访问过 → 在"全部非当前城"中选距目标点最近者，允许重复访问
 ```
@@ -124,7 +124,7 @@ func MatchNearestCity(cities []City, targetLat, targetLng float64, opt MatchOpti
 ### 5.4 边界条件
 | 场景 | 处理 |
 |---|---|
-| cities 为空 | 返回 error（理论不会，seed 至少有 12 城） |
+| cities 为空 | 返回 error（正常内容库不应为空） |
 | 仅当前城 1 座 | 返回 error 或允许停留(service 决定提示) |
 | 目标点落海/境外 | 不影响——只看哪座城离目标点最近 |
 | 已访问全部城市 | 在全部非当前城中选距目标点最近者，允许重复 |

@@ -25,6 +25,10 @@ frontend/.env
 npm-debug.log*
 yarn-error.log*
 
+# ---------- Python 辅助脚本缓存 ----------
+__pycache__/
+*.pyc
+
 # ---------- 运行时产物（用户上传/生成图，不入库） ----------
 /uploads/
 !/uploads/.gitkeep

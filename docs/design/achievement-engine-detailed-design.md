@@ -1,13 +1,13 @@
 # 成就引擎详细设计（achievement-engine-detailed-design.md）
 
-> 对应概要设计 18 章。这是 internal/achievement 包的实现依据。约束见 go-backend-rules.md。
+> 这是 internal/achievement 包的实现依据。约束见 go-backend-rules.md。
 > 包含 2 个文件：rules.go（规则解析与单条判定）/ evaluator.go（整体评估）。
 > 被 achievement_service.go 调用，在 POST /api/checkin 完成打卡后触发。
 
 ## 0. 设计目标
-成就**配置化**：成就定义全部存 achievements 表(由 seed 导入)，引擎按 rule_type + rule_value 判定，新增成就**只改 seed 不改代码**(除非引入新 rule_type)。
+成就**配置化**：成就定义存 `achievements` 表，可由后台 CMS 或受控 seed 维护。引擎按 `rule_type + rule_value` 判定，新增成就通常不改代码，除非引入新的 `rule_type`。
 
-## 1. 成就分类（对应概要 18.1）
+## 1. 成就分类
 | 类别 | 说明 | 解锁条件特征 |
 |---|---|---|
 | 通用成就 | 自由探索 + 游戏模式都可解锁 | 基于打卡/城市标签 |
@@ -25,7 +25,7 @@
 | dice_direction | "北:2" | dice_rolls | 连续 ≥2 次掷出该方向 |
 | dice_distance | "1200" | dice_rolls | 单次掷出 ≥该距离 |
 
-## 3. 示例成就映射（来自 achievement-design.md，供 seed）
+## 3. 当前 seed 成就映射
 通用：
 | code | name | rule_type | rule_value |
 |---|---|---|---|
@@ -82,7 +82,7 @@ dice_direction   : 解析"方向:n" → s.MaxSameDirRun[方向] >= n
 func Evaluate(userID int64, repos Repos) (newlyUnlocked []Achievement, err error)
 ```
 
-### 5.2 主流程（对应概要 18.4）
+### 5.2 主流程
 ```text
 1. 一次性构建 UserStats：
    - checkin_repo: CheckinCount

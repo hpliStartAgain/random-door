@@ -1,41 +1,58 @@
-"# React 前端编码约束
+# React 前端编码约束
 
-> 写任何前端文件前必读。父约束：`CLAUDE.md`。
+> 写任何前端文件前必读。父约束：`AGENTS.md` / `CLAUDE.md`。
 
 ## 1. 组件与状态
-- 一律函数组件 + Hooks，不用 class 组件。
-- 全局状态用 **Zustand**（useUserStore / useGameStore / useCityStore），不滥用 Context。
-- 组件内只放 UI 与局部状态，跨页共享状态放 store。
+
+- 一律函数组件 + Hooks，不使用 class 组件。
+- 全局状态用 Zustand：`useUserStore`、`useGameStore`、`useCityStore`、`useViewStore`、`useMapStore`、`useToastStore`。
+- 组件内只放 UI、交互编排和局部状态；跨视图共享状态放 store。
 
 ## 2. 数据请求
-- **组件不得直接 fetch/axios**；统一走 src/api/ 下封装函数，底层用 api/client.ts 的 axios 实例（含拦截器：注入 user_id、统一错误处理）。
-- 接口的 TS 类型来源于 docs/design/api-contract.md，与后端字段名一致。
+
+- 组件不得直接调用业务 API 的 `fetch` / `axios`。
+- 所有业务请求走 `src/api/index.ts`，底层统一使用 `src/api/client.ts`。
+- API 类型集中在 `src/api/types.ts`，字段名与 `docs/design/api-contract.md` 对齐。
+- 读取本地静态图片转 File 等浏览器工具也应封装在 api/lib 层，避免散落到组件。
 
 ## 3. 样式
-- Tailwind CSS + shadcn/ui 为主，**不手写大量自定义 CSS**。
-- 主题色 / 城市色在 tailwind.config.js 扩展。
+
+- Tailwind CSS 为主，保持现有 shadcn/ui 风格约定。
+- 避免无约束的大段自定义 CSS；全局动效和主题变量集中在 `src/index.css`。
+- 图标按钮优先使用现有 icon 库；已有内联 SVG 可维护，但新增按钮优先用库图标。
 
 ## 4. 地图
-- 高德地图 SDK **只在 MapCanvas.tsx 内封装**，其它组件通过 props/回调与地图交互，禁止在别处直接 new AMap.*。
+
+- 高德地图 SDK 只在 `MapCanvas.tsx` 内封装。
+- 其它组件通过 store、props 或回调表达地图意图，禁止直接 `new AMap.*`。
 
 ## 5. 图片上传
-- 走 ImageUploader.tsx，前端做基本类型/大小预校验（jpg/jpeg/png/webp，≤5MB），真正校验在后端。
+
+- 前端做基础类型/大小预校验：jpg / jpeg / png / webp，默认不超过 5MB。
+- 后端 `internal/upload/validator.go` 是最终校验点。
 
 ## 6. 安全
-- 前端**绝不出现任何 API Key**（LLM/生图 Key 全在后端）。高德 JS Key 属前端公开 Key，放 VITE_ 环境变量。
+
+- 前端不得出现 LLM / IMAGE API Key。
+- 仅允许 `VITE_AMAP_KEY`、`VITE_AMAP_SECURITY_CODE` 这类前端公开地图配置。
 
 ## 7. 目录约定
-```
+
+```text
 src/
-  pages/        路由页（8 个）
-  components/   复用组件（13 个）
-  api/          接口封装 + 类型
-  store/        Zustand store（3 个）
+  pages/        AdminPage / AssetPage / AchievementPage / GuessChallengePage
+  components/   地图、侧栏、抽屉、打卡、评论、个人面板、覆盖层
+  api/          axios client、业务 API、TS 类型
+  store/        Zustand store
+  lib/          纯前端工具
+  assets/       前端静态资源引用
 ```
-每个文件职责见 docs/design/frontend-detailed-design.md。
+
+每个文件职责见 `docs/design/frontend-detailed-design.md`。
 
 ## 8. 提交前自检
-- [ ] 无组件直接 fetch；请求都走 api 层
-- [ ] 无前端硬编码 AI Key
-- [ ] 地图调用只在 MapCanvas
-- [ ] 类型与 api-contract.md 对齐"
+
+- [ ] 无组件直接请求业务 API。
+- [ ] 无前端硬编码 AI Key。
+- [ ] 高德 SDK 调用只在 `MapCanvas.tsx`。
+- [ ] 类型与 `api-contract.md` 对齐。

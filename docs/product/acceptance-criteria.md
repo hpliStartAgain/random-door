@@ -1,36 +1,51 @@
-# MVP 验收标准（acceptance-criteria.md）
+# 验收标准
 
-> 对应概要设计 27 章。既是开发完成定义(DoD)，也是 PR 审查与现场演示的 checklist。
+## 1. 主链路验收
 
-## 验收清单（20 条，逐条勾选）
-| # | 验收条件 | 关联接口/页面 | 通过 |
-|---|---|---|---|
-| 1 | 用户可打开网页进入首页 | HomePage | ☐ |
-| 2 | 可看到自由探索与游戏互动两个入口 | ModeSelectPage | ☐ |
-| 3 | 可进入自由探索模式 | FreeExplorePage | ☐ |
-| 4 | 自由探索下可在地图点击城市 | GET /cities、MapCanvas | ☐ |
-| 5 | 点击城市后进入城市详情页 | POST /visits/free、GET /cities/{id} | ☐ |
-| 6 | 可进入游戏互动模式 | GameModePage | ☐ |
-| 7 | 游戏模式可获取当前位置或用默认位置 | POST /game/init | ☐ |
-| 8 | 可点击掷骰按钮 | DicePanel | ☐ |
-| 9 | 系统生成随机方向与随机距离 | geo 算法 | ☐ |
-| 10 | 系统计算并返回目标城市 | POST /game/roll | ☐ |
-| 11 | 地图展示移动到目标城市的过程 | MapCanvas 动画 | ☐ |
-| 12 | 城市详情展示地标/美食/人物/方言 | GET /cities/{id} | ☐ |
-| 13 | 可与至少一个城市人物 AI 对话 | POST /chat | ☐ |
-| 14 | 可上传照片生成赛博游客照 | POST /checkin/generate-image | ☐ |
-| 15 | 可完成城市打卡 | POST /checkin | ☐ |
-| 16 | 打卡后可解锁至少一种通用成就 | 成就引擎 | ☐ |
-| 17 | 游戏模式打卡后可解锁至少一种游戏专属成就 | 成就引擎 | ☐ |
-| 18 | 系统记录用户通过何种模式进入城市 | city_visits.visit_mode | ☐ |
-| 19 | 2C2G 单机可通过 Docker Compose 启动 | docker-compose.yml | ☐ |
-| 20 | 演示过程不依赖手改数据库或临时脚本 | 后台 catalog 已维护；空库可用受控 seed bootstrap 初始化 | ☐ |
+| # | 验收条件 | 关联接口 / 页面 |
+|---|---|---|
+| 1 | 用户可打开首页并看到“任意门”品牌与两个主入口。 | WelcomeOverlay |
+| 2 | 首次进入自动创建或恢复匿名用户。 | POST /users/anonymous |
+| 3 | 可加载城市列表，显示城市卡片、地图 marker、搜索和筛选。 | GET /cities, Sidebar, MapCanvas |
+| 4 | 自由探索点击城市后写访问记录并进入详情。 | POST /visits/free, GET /cities/{id} |
+| 5 | 城市详情展示简介、标签、地标、美食、人物、方言。 | CityDetailPanel |
+| 6 | 地标或城市风光可进入沉浸图片视图，声景按钮不自动播放。 | StreetViewCanvas, SoundscapeControl |
+| 7 | 可与城市人物发起 AI 对话，失败时不阻断浏览。 | POST /chat, RightDrawer |
+| 8 | 可发表评论并读取评论列表。 | GET/POST /comments |
+| 9 | 任意门模式可初始化起点城市。 | POST /game/init |
+| 10 | 任意门模式可随机方向与距离，返回目标城市并写访问。 | POST /game/roll |
+| 11 | 掷骰后地图展示移动/降落过程，并进入目标城市详情。 | MapCanvas, RandomCityModal |
+| 12 | 可上传自拍创建异步生图任务。 | POST /checkin/generate-image |
+| 13 | 可查询/重试生图任务，成功后展示生成图。 | GET/POST /checkin/image-tasks |
+| 14 | 可确认打卡并生成海报。 | POST /checkin, CheckinPoster |
+| 15 | 访问或打卡可触发新成就解锁，成就墙可展示进度。 | AchievementUnlock, AchievementPage |
+| 16 | 我的足迹可展示访问城市、海报和成就进度。 | GET /users/{id}/assets |
+| 17 | 用户可编辑匿名资料，注册/登录可保留足迹。 | profile, auth |
+| 18 | 可生成猜城市文案和挑战链接，好友可提交答案。 | /guess/* |
+| 19 | 后台需通过 ADMIN_TOKEN 验证后才能维护内容。 | /admin/* |
+| 20 | Docker Compose 启动后健康检查通过，空库可通过受控 seed 初始化。 | docker-compose.yml, Makefile |
 
-## 验收方式
-- 自动：docker compose up 后服务健康检查通过；默认不覆盖后台 catalog，空库初始化需显式执行 `make seed`。
-- 手动：按上表 1→20 走通完整主链路（含一次游戏模式掷骰打卡解锁游戏专属成就）。
+## 2. 工程验收
 
-## 主链路定义（必须走通）
+- `make test` 后端单元测试通过，或明确记录无法执行原因。
+- `npm run build` 前端构建通过，或明确记录无法执行原因。
+- README、API 契约、数据库设计、前后端详设与当前代码一致。
+- `.env`、密钥、运行时上传/生成文件不入库。
+
+## 3. 内容验收
+
+- 当前 seed 可通过 seedtool 校验。
+- 每座 seed 城市至少具备城市基础信息、标签、封面、地标、美食、人物、方言。
+- 后台 coverage 中 `missing_fields` 应作为内容运营待办处理。
+
+## 4. 主链路定义
+
 ```text
-首页 → 模式选择 → (自由探索点城市 / 游戏互动掷骰到城) → 城市详情 → AI 对话 → 赛博打卡 → 成就解锁
+进入任意门
+  -> 自由探索或随机漫游到城市
+  -> 城市详情
+  -> 风光浏览 / AI 对话 / 评论
+  -> 赛博打卡
+  -> 海报与成就
+  -> 足迹资产沉淀
 ```

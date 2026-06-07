@@ -1,42 +1,67 @@
-# 数据模型与 ER 图（data-model-er.md）
+# 数据模型与 ER 图
 
-> 对应概要设计 14 章。逐字段见 database-detailed-design.md。
+## 1. 核心实体
 
-## 1. 核心实体（14 个）
-User、City、CityTag、Landmark、Food、Character、CityVisit、DiceRoll、Checkin、Achievement、UserAchievement、ChatMessage、AITask、AIUsageLog。
+当前 GORM 模型覆盖 17 张表：
 
-## 2. 关键抽象：CityVisit（城市访问）
-自由探索与游戏互动**不是两套系统**，而是两种「到达城市」的方式。两者最终都写入 CityVisit，用 `visit_mode`(free/game) 区分来源。到达后共享：城市详情 → AI 对话 → 赛博打卡 → 成就。这是降低双模式开发成本的核心设计。
+```text
+users
+cities / city_tags / landmarks / foods / characters
+city_visits / dice_rolls / checkins
+achievements / user_achievements
+chat_messages / comments
+ai_tasks / ai_usage_logs
+guess_challenges / guess_answers
+```
+
+字段级设计见 `../design/database-detailed-design.md`。
+
+## 2. 关键抽象
+
+| 抽象 | 说明 |
+|---|---|
+| CityVisit | 用户到达城市的事实，统一承接自由探索与任意门随机漫游。 |
+| DiceRoll | 任意门随机方向、距离、目标点与目标城市记录。 |
+| Checkin | 用户确认打卡后的资产与成就数据来源。 |
+| Achievement | 配置化规则定义，后台可维护。 |
+| AITask | 异步图像生成任务，避免请求阻塞。 |
+| GuessChallenge | 匿名分享挑战，不暴露创建者 user_id。 |
 
 ## 3. 实体关系
+
 ```text
-User 1 ── N CityVisit
-User 1 ── N DiceRoll
-User 1 ── N Checkin
-User 1 ── N ChatMessage
-User 1 ── N UserAchievement
-User 1 ── N AITask
-User 1 ── N AIUsageLog
+User 1 - N CityVisit
+User 1 - N DiceRoll
+User 1 - N Checkin
+User 1 - N ChatMessage
+User 1 - N Comment
+User 1 - N UserAchievement
+User 1 - N AITask
+User 1 - N AIUsageLog
 
-City 1 ── N CityTag
-City 1 ── N Landmark
-City 1 ── N Food
-City 1 ── N Character
-City 1 ── N CityVisit
-City 1 ── N Checkin
+City 1 - N CityTag
+City 1 - N Landmark
+City 1 - N Food
+City 1 - N Character
+City 1 - N CityVisit
+City 1 - N Checkin
+City 1 - N GuessChallenge
 
-DiceRoll 1 ── 1 CityVisit   (city_visits.dice_roll_id 回指)
-Character 1 ── N ChatMessage
-Achievement 1 ── N UserAchievement
+DiceRoll 1 - 1 CityVisit
+Character 1 - N ChatMessage
+Achievement 1 - N UserAchievement
+GuessChallenge 1 - N GuessAnswer
 ```
 
 ## 4. Mermaid ER 图
+
 ```mermaid
 erDiagram
     USER ||--o{ CITY_VISIT : makes
     USER ||--o{ DICE_ROLL : rolls
-    USER ||--o{ CHECKIN : does
+    USER ||--o{ CHECKIN : creates
     USER ||--o{ CHAT_MESSAGE : sends
+    USER ||--o{ COMMENT : writes
     USER ||--o{ USER_ACHIEVEMENT : unlocks
     USER ||--o{ AI_TASK : owns
     USER ||--o{ AI_USAGE_LOG : consumes
@@ -47,90 +72,30 @@ erDiagram
     CITY ||--o{ CHARACTER : has
     CITY ||--o{ CITY_VISIT : receives
     CITY ||--o{ CHECKIN : receives
+    CITY ||--o{ GUESS_CHALLENGE : hosts
 
     DICE_ROLL ||--|| CITY_VISIT : produces
     CHARACTER ||--o{ CHAT_MESSAGE : talks
     ACHIEVEMENT ||--o{ USER_ACHIEVEMENT : grants
-
-    USER {
-      bigint id PK
-      varchar anonymous_id UK
-      bigint current_city_id
-    }
-    CITY {
-      bigint id PK
-      varchar name
-      double lat
-      double lng
-    }
-    CITY_VISIT {
-      bigint id PK
-      bigint user_id FK
-      bigint city_id FK
-      varchar visit_mode
-      varchar source
-      bigint from_city_id
-      bigint dice_roll_id
-    }
-    DICE_ROLL {
-      bigint id PK
-      bigint user_id FK
-      bigint to_city_id
-      varchar direction
-      int distance_km
-    }
-    CHECKIN {
-      bigint id PK
-      bigint user_id FK
-      bigint city_id FK
-      bigint landmark_id
-      bigint visit_id
-    }
-    ACHIEVEMENT {
-      bigint id PK
-      varchar code UK
-      varchar rule_type
-      varchar rule_value
-    }
-    USER_ACHIEVEMENT {
-      bigint id PK
-      bigint user_id FK
-      bigint achievement_id FK
-    }
-    CHAT_MESSAGE {
-      bigint id PK
-      bigint character_id FK
-      varchar role
-      text content
-    }
-    AI_TASK {
-      bigint id PK
-      bigint user_id FK
-      varchar type
-      varchar status
-      json input_json
-      varchar result_url
-    }
-    AI_USAGE_LOG {
-      bigint id PK
-      bigint user_id FK
-      varchar usage_type
-      date usage_date
-      int count
-    }
+    GUESS_CHALLENGE ||--o{ GUESS_ANSWER : receives
 ```
 
-## 5. 读写热点（指导索引）
-| 场景 | 主要查询 | 建议索引 |
-|---|---|---|
-| 成就判定 | 按 user 聚合 checkins / city_visits | checkins(user_id,created_at)、city_visits(user_id,city_id) |
-| 成就墙 | user_achievements 按 user | user_achievements UNIQUE(user_id,achievement_id) |
-| 对话历史 | 按 user+character 拉取 | chat_messages(user_id,character_id,created_at) |
-| AI 生图任务 | worker 领取 queued/retryable | ai_tasks(status,updated_at)、ai_tasks(type,status) |
-| AI 用量限制 | 按 user/day 计数 | ai_usage_logs UNIQUE(user_id,usage_type,usage_date) |
-| 城市详情 | 按 city 取 landmark/food/character | 各表 INDEX(city_id) |
+## 5. 读写热点
+
+| 场景 | 主要索引 |
+|---|---|
+| 城市列表 | `cities.name`、`city_tags(city_id, tag)` |
+| 城市详情 | `landmarks(city_id)`、`foods(city_id)`、`characters(city_id)` |
+| 足迹资产 | `city_visits(user_id, created_at)`、`checkins(user_id, created_at)` |
+| 成就判定 | `checkins(user_id, city_id)`、`city_visits(user_id, city_id)`、`dice_rolls(user_id, created_at)` |
+| 对话历史 | `chat_messages(user_id, character_id, created_at)` |
+| 生图 worker | `ai_tasks(status, updated_at)`、`ai_tasks(type, status)` |
+| AI 用量 | `ai_usage_logs(user_id, usage_type, usage_date)` |
+| 猜城市挑战 | `guess_challenges(code)`、`guess_answers(challenge_code, created_at)` |
 
 ## 6. 数据生命周期
-- 用户：匿名创建，长期保留（localStorage 关联）。
-- 内容（city/landmark/food/character/achievement）：seed 导入，演示期只读。
-- 行为（visit/dice/checkin/chat/user_achievement/ai_task/ai_usage_log）：运行时产生，可累积。
+
+- 内容数据：数据库为事实源，后台 CMS 维护；seed 用于初始化和受控同步。
+- 用户数据：匿名身份保存在前端持久化 store，可升级为账号。
+- 行为数据：访问、掷骰、对话、评论、打卡、成就、挑战持续累积。
+- 运行时文件：`uploads/` 中的用户上传、生成图和后台导入图不提交到仓库。

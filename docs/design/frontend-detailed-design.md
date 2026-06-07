@@ -1,95 +1,96 @@
-# 前端详细设计（frontend-detailed-design.md）
+# 前端详细设计
 
-> 对应概要设计 13 章。这是 agent 创建所有前端 `.ts/.tsx` 文件的直接依据。约束见 react-frontend-rules.md。
-> 状态用 Zustand；请求统一走 api 层；地图只在 MapCanvas 封装；字段类型对齐 api-contract.md。
+## 1. 应用形态
 
-## 0. 完整前端文件树
+当前前端是单页全屏工作台，不是多路由页面栈。`App.tsx` 根据 URL 和 Zustand 状态组合以下区域：
+
+```text
+/?guess=<code> -> GuessChallengePage + Toast
+
+默认入口
+  Navbar
+  Sidebar
+  MapCanvas
+  StreetViewCanvas (canvasMode=street 时覆盖地图)
+  RandomCityModal (currentView=GAME_DICE)
+  RightDrawer
+  AchievementPage / AssetPage 覆盖层
+  WelcomeOverlay
+  AdminPage
+  ProfilePanel
+  Toast
 ```
-frontend/src/
-  pages/      HomePage ModeSelectPage FreeExplorePage GameModePage
-              CityPage ChatPage CheckinPage AchievementPage GuessChallengePage
-  components/ MapCanvas CityMarker DicePanel CityCard LandmarkCard
-              FoodCard CharacterCard DialectCard ChatBox ImageUploader
-              CheckinResult BadgeWall ModeEntryCard GuessChallengeModal
-              SoundscapeControl ProfilePanel ProfileVisitedList ProfilePosterGrid
-  api/        client.ts city.ts game.ts visit.ts chat.ts checkin.ts achievement.ts
-  store/      useUserStore.ts useGameStore.ts useCityStore.ts
-  App.tsx main.tsx router.tsx
-```
 
----
+## 2. pages
 
-## 1. pages（8 个路由页）
-| 页面 | 路由 | 职责 | 数据来源 | 调用接口 |
-|---|---|---|---|---|
-| HomePage | / | 产品介绍 + 进入按钮；首次进入触发匿名用户创建 | useUserStore | POST /users/anonymous |
-| ModeSelectPage | /mode | 展示自由探索/游戏互动两入口卡片 | - | - |
-| FreeExplorePage | /explore | 地图打点，点击城市→写 free visit→跳详情 | useCityStore | GET /cities、POST /visits/free |
-| GameModePage | /game | 获取定位→init→掷骰→移动动画→跳详情 | useGameStore | POST /game/init、POST /game/roll |
-| CityPage | /city/:id | 城市详情（两模式共用）：简介/地标/美食/人物/方言 + 对话/打卡/成就入口 | useCityStore | GET /cities/{id} |
-| ChatPage | /city/:id/chat/:cid | 与人物对话 | - | POST /chat |
-| CheckinPage | /city/:id/checkin | 上传照片→生图→确认打卡 | - | POST /checkin/generate-image、POST /checkin |
-| AchievementPage | /achievements | 成就墙（已解锁/未解锁/进度） | useUserStore | GET /users/{id}/achievements |
-| GuessChallengePage | /?guess=:code | 好友猜位置挑战页，展示截图并提交答案 | - | GET /guess/challenges/{code}、POST /guess/challenges/{code}/answers |
-
----
-
-## 2. components（13 个）
-| 组件 | props（关键） | 职责/交互 |
+| 文件 | 职责 | 主要接口 |
 |---|---|---|
-| MapCanvas | cities, onCityClick, mode, movePath? | **唯一封装高德 SDK**；打城市/地标 Marker；点击 marker 进入对应城市详情；游戏模式播放移动动画 |
-| CityMarker | city, onClick | 地图标记（也可由 MapCanvas 内部生成） |
-| DicePanel | onRoll, rolling, result | 掷骰按钮 + 动画 + 显示方向/距离 |
-| CityCard | city | 城市简介卡；发现页列表项展示 landmark_count/food_count/character_count 信息密度（CityListItem，缺字段按 0） |
-| LandmarkCard | landmark, onCheckin? | 地标卡，可触发打卡 |
-| FoodCard | food | 美食卡 |
-| CharacterCard | character, onChat | 人物卡，点击进对话；展示 role_title/life_span/intro_quote（引导语非史实断言） |
-| DialectCard | sample, explanation | 方言样例 + 解释 |
-| ChatBox | messages, onSend, loading | 对话气泡 + 输入框 |
-| ImageUploader | onSelect, maxSizeMB=5, accept | 选图 + 前端预校验（类型/大小） |
-| CheckinResult | imageUrl, onConfirm, onRetry | 展示生成图 + 确认/重试 |
-| BadgeWall | unlocked, locked, progress | 成就墙网格 |
-| ModeEntryCard | mode, title, desc, onEnter | 模式入口卡 |
-| GuessChallengeModal | shotUrl, caption, cityId, targetName | 创建挑战链接、复制文案/图片、保存截图 |
-| SoundscapeControl | url, label | 地标声景播放控制；必须用户点击后播放 |
-| ProfilePanel | - | 右侧个人足迹面板；读取资产与 profile，支持匿名资料编辑 |
-| ProfileVisitedList | cities, compact | 足迹城市列表，可复用在资产页和 profile 面板 |
-| ProfilePosterGrid | posters, compact | 打卡海报列表，可复用在资产页和 profile 面板 |
+| `AdminPage.tsx` | ADMIN_TOKEN 门控后台 CMS，维护城市/标签/地标/美食/人物/成就/媒体。 | `/admin/*` |
+| `AchievementPage.tsx` | 成就墙，展示已解锁、未解锁、进度。 | `GET /users/{id}/achievements` |
+| `AssetPage.tsx` | 用户资产页，展示足迹城市、海报、成就进度。 | `GET /users/{id}/assets` |
+| `GuessChallengePage.tsx` | 分享挑战落地页，提交猜测并显示结果。 | `GET/POST /guess/challenges/*` |
 
----
+## 3. components
 
-## 3. api（接口封装，组件不得直接 fetch）
-### 3.1 client.ts
-- 创建 axios 实例：baseURL=/api；请求拦截器注入 X-User-Id（从 useUserStore）；响应拦截器统一解析错误 `{error:{code,message}}` 并抛出。
-### 3.2 各业务文件（函数 + TS 类型，类型对齐 api-contract.md）
-| 文件 | 导出函数 |
+| 文件 | 职责 |
 |---|---|
-| city.ts | listCities()、getCity(id) |
-| game.ts | initGame(lat,lng)、rollDice(fromCityId,lat,lng) |
-| visit.ts | createAnonymousUser(anonymousId)、createFreeVisit(cityId,source) |
-| chat.ts | sendChat(cityId,characterId,message) |
-| checkin.ts | generateImage(form)、createCheckin(payload) |
-| achievement.ts | getAchievements(userId) |
-| guess.ts | generateGuessCaption()、createGuessChallenge()、getGuessChallenge()、answerGuessChallenge() |
-| user.ts | register()、login()、getUserProfile()、updateUserProfile() |
+| `MapCanvas.tsx` | 唯一封装高德 SDK；加载城市/地标 marker，处理点击、飞行和降落动画。 |
+| `StreetViewCanvas.tsx` | 图片沉浸视图，提供声景、猜一猜、赛博打卡入口。 |
+| `layout/Navbar.tsx` | 品牌、我的足迹、成就墙、后台入口。 |
+| `layout/Sidebar.tsx` | 城市列表、搜索/区域/标签筛选、任意门入口、城市详情容器。 |
+| `CityDetailPanel.tsx` | 城市详情、地标/美食/人物/方言、打卡和成就联动。 |
+| `RightDrawer.tsx` | 人物 AI 对话抽屉。 |
+| `CheckinFlow.tsx` | 选择地标、上传自拍、创建生图任务、轮询/重试、确认打卡。 |
+| `CheckinPoster.tsx` | Canvas 合成并下载打卡海报。 |
+| `CommentThread.tsx` | 评论列表与创建。 |
+| `GuessChallengeModal.tsx` | 创建挑战链接，复制分享文案。 |
+| `SoundscapeControl.tsx` | 用户点击后播放地标声景。 |
+| `ProfilePanel.tsx` | 右侧个人足迹面板，资料编辑、城市/海报/成就标签页。 |
+| `ProfileVisitedList.tsx` | 足迹城市列表复用组件。 |
+| `ProfilePosterGrid.tsx` | 打卡海报网格复用组件。 |
+| `Toast.tsx` | 全局 toast 展示。 |
 
----
+### overlays
 
-## 4. store（Zustand，3 个）
-| store | 状态 | 动作 |
-|---|---|---|
-| useUserStore | userId, anonymousId, username, nickname, currentCityId | initUser()（读 localStorage，无则建匿名用户并存）、register()、login()、logout() |
-| useGameStore | fromCity, lastRoll, targetCity, rolling | setInit、roll、reset |
-| useCityStore | cities[], cityCache{}, searchQuery, activeRegion, activeTag | loadCities()、loadCity(id)（带缓存）、筛选状态 |
-| useViewStore | currentView, canvasMode, streetTarget, drawer, profileOpen | 视图切换、街景目标、右抽屉、个人面板开关 |
+| 文件 | 职责 |
+|---|---|
+| `WelcomeOverlay.tsx` / `WelcomeCard.tsx` | 首屏欢迎、模式入口、注册/登录。 |
+| `RandomCityModal.tsx` | 任意门随机漫游弹窗。 |
+| `AchievementUnlock.tsx` | 成就解锁庆祝层。 |
+| `CityDrawer.tsx` / `DiceConsole.tsx` | 旧组件仍在仓库中，后续清理见 `TODO.md`。 |
 
----
+## 4. api
 
-## 5. 入口与路由
-- main.tsx：挂载 App，初始化高德 SDK loader（仅 VITE_AMAP_KEY，前端公开 Key）。
-- App.tsx：布局 + 路由出口；首屏调用 useUserStore.initUser()。
-- router.tsx：定义上表 8 条路由。
+| 文件 | 职责 |
+|---|---|
+| `client.ts` | axios 实例，baseURL `/api`，注入 `X-User-Id`，统一错误结构。 |
+| `index.ts` | 所有业务 API 函数。 |
+| `types.ts` | 与 API 契约对齐的 TypeScript 类型。 |
 
-## 6. 安全提醒
-- 前端**不得出现 LLM/生图 Key**；只允许 VITE_AMAP_KEY。
-- 所有请求经 api 层；高德调用只在 MapCanvas。
+组件不得直接请求业务 API。
+
+## 5. store
+
+| store | 主要状态 |
+|---|---|
+| `useUserStore` | userId、anonymousId、username、nickname、currentCityId、注册/登录/登出。 |
+| `useCityStore` | cities、cityCache、searchQuery、activeRegion、activeTag、filteredCities。 |
+| `useGameStore` | 起点、上次 roll、方向、距离、目标城市、rolling 状态。 |
+| `useMapStore` | map 实例相关动作，例如 flyTo。 |
+| `useViewStore` | currentView、activeCityId、canvasMode、drawer、rollPhase、profileOpen。 |
+| `useToastStore` | toast 队列。 |
+
+## 6. lib / assets
+
+| 文件 | 职责 |
+|---|---|
+| `lib/cityFilters.ts` | 城市区域、标签与搜索筛选。 |
+| `lib/shareImage.ts` | 分享/截图相关纯前端工具。 |
+| `assets/foxImages.ts` | 狐狸视觉资源映射。 |
+
+## 7. 安全与边界
+
+- 前端只允许高德公开 Key；不得出现 LLM / IMAGE Key。
+- 高德 SDK 只在 `MapCanvas.tsx` 内使用。
+- 上传预校验只做体验优化，最终校验在后端。
+- 与后端字段不一致时，先改 `api-contract.md`，再改 `types.ts` 和调用点。
