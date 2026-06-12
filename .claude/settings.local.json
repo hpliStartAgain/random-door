@@ -14,7 +14,12 @@
       "Bash(git -C /c/Users/19682/Documents/random-door check-ignore frontend/.env frontend/.env.local .env frontend/dist)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "WebFetch(domain:unsplash.com)",
+      "Bash(curl -s -H \"Authorization: Client-ID bC8T7fNPIrJvSepkE-w60yVqmlq9fZDWelIgxxkJZxg\" \"https://api.unsplash.com/search/photos?query=beijing&per_page=3\")",
+      "Bash(echo \"EXIT: $?\")",
+      "Read(//tmp/**)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
